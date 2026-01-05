@@ -1,0 +1,129 @@
+name: Test Correct Selectors
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install selenium beautifulsoup4
+    
+    - name: Install Chrome
+      uses: browser-actions/setup-chrome@latest
+    
+    - name: Install ChromeDriver
+      uses: nanasess/setup-chromedriver@v2
+    
+    - name: Create test script
+      run: |
+        cat > test_selectors.py << 'EOF'
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        from bs4 import BeautifulSoup
+        import time
+        import re
+
+        def extract_number(text):
+            if not text:
+                return 'NA'
+            cleaned = re.sub(r'[^0-9]', '', text)
+            return cleaned if cleaned else 'NA'
+
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+
+        driver = webdriver.Chrome(options=chrome_options)
+
+        # Test 1: ICPSR with correct selectors
+        print("="*60)
+        print("Test 1: ICPSR 38567")
+        print("="*60)
+        try:
+            driver.get("https://www.icpsr.umich.edu/web/ICPSR/studies/38567")
+            time.sleep(5)
+            
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Find all figures
+            figures = soup.find_all('figure', class_='d-flex')
+            print(f"Found {len(figures)} figure elements")
+            
+            downloads = 'NA'
+            citations = 'NA'
+            
+            for figure in figures:
+                figcaption = figure.find('figcaption', class_='h4')
+                if figcaption:
+                    caption_text = figcaption.text.strip().lower()
+                    number_span = figure.find('span', class_='display-2')
+                    
+                    if number_span:
+                        number = extract_number(number_span.text)
+                        
+                        if 'download' in caption_text:
+                            downloads = number
+                            print(f"✅ Downloads: {downloads}")
+                        elif 'publication' in caption_text:
+                            citations = number
+                            print(f"✅ Citations: {citations}")
+            
+            if downloads == 'NA':
+                print("❌ Could not find downloads")
+            if citations == 'NA':
+                print("❌ Could not find citations")
+                
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
+        # Test 2: openICPSR with correct selectors
+        print("\n" + "="*60)
+        print("Test 2: openICPSR 110641")
+        print("="*60)
+        try:
+            driver.get("https://www.openicpsr.org/openicpsr/project/110641/view")
+            time.sleep(10)
+            
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            downloads = 'NA'
+            
+            # Look for the download well
+            download_well = soup.find('div', class_='overallDownloadWell')
+            if download_well:
+                stat_num = download_well.find('span', class_='statNum')
+                if stat_num:
+                    downloads = extract_number(stat_num.text)
+                    print(f"✅ Downloads: {downloads}")
+            
+            if downloads == 'NA':
+                print("❌ Could not find downloads")
+                
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
+        driver.quit()
+        print("\n" + "="*60)
+        print("✅ Test complete!")
+        print("="*60)
+        EOF
+    
+    - name: Run test
+      run: python test_selectors.py

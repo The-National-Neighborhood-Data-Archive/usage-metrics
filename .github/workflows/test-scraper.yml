@@ -1,0 +1,125 @@
+name: Test Scraper (2 studies)
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install selenium beautifulsoup4 pandas requests
+    
+    - name: Install Chrome
+      uses: browser-actions/setup-chrome@latest
+    
+    - name: Install ChromeDriver
+      uses: nanasess/setup-chromedriver@v2
+    
+    - name: Create test script
+      run: |
+        cat > test_scraper.py << 'EOF'
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        from bs4 import BeautifulSoup
+        import time
+        import re
+
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+
+        driver = webdriver.Chrome(options=chrome_options)
+
+        def extract_number(text):
+            if not text:
+                return 'NA'
+            cleaned = re.sub(r'[^0-9]', '', text)
+            return cleaned if cleaned else 'NA'
+
+        # Test 1: ICPSR direct URL
+        print("=" * 60)
+        print("Test 1: ICPSR 38567 (direct URL)")
+        print("=" * 60)
+        try:
+            driver.get("https://www.icpsr.umich.edu/web/ICPSR/studies/38567")
+            time.sleep(5)
+            
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.ID, "studyMetrics"))
+            )
+            
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            title = soup.find('h1', class_='study-title')
+            print(f"✅ Title: {title.text.strip() if title else 'Not found'}")
+            
+            metrics_div = soup.find('div', id='studyMetrics')
+            if metrics_div:
+                download_elem = metrics_div.find('span', string=re.compile('Downloads'))
+                if download_elem:
+                    parent = download_elem.parent
+                    number_elem = parent.find('strong') or parent.find('span', class_='count')
+                    if number_elem:
+                        downloads = extract_number(number_elem.text)
+                        print(f"✅ Downloads: {downloads}")
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
+        # Test 2: openICPSR direct URL with longer waits
+        print("\n" + "=" * 60)
+        print("Test 2: openICPSR 110641 (direct URL, long wait)")
+        print("=" * 60)
+        try:
+            driver.get("https://www.openicpsr.org/openicpsr/project/110641/view")
+            print("Waiting 10 seconds for page to load...")
+            time.sleep(10)
+            
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.TAG_NAME, "h1"))
+            )
+            
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            title = soup.find('h1')
+            print(f"✅ Title: {title.text.strip() if title else 'Not found'}")
+            
+            # Look for stat numbers
+            stat_nums = soup.find_all('span', class_='statNum')
+            stat_labels = soup.find_all('p', class_='statLabel')
+            print(f"Found {len(stat_nums)} stat numbers")
+            
+            for i, label in enumerate(stat_labels):
+                if i < len(stat_nums):
+                    label_text = label.text.strip().lower()
+                    if 'download' in label_text:
+                        downloads = extract_number(stat_nums[i].text)
+                        print(f"✅ Downloads: {downloads}")
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            import traceback
+            print(traceback.format_exc())
+
+        driver.quit()
+        print("\n✅ Test complete!")
+        EOF
+    
+    - name: Run test
+      run: python test_scraper.py
