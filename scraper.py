@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """
 NaNDA Usage Metrics Scraper
-Runs monthly via GitHub Actions
+Runs monthly via GitHub Actions - saves to CSV only
 """
 
 import os
-import json
 import time
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -18,12 +16,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 import re
-import gspread
-from google.oauth2.service_account import Credentials
 
 # Configuration
 SCRAPE_DATE = datetime.now().strftime('%Y-%m-%d')
-OUTPUT_DIR = 'outputs'
+OUTPUT_DIR = 'data'
 
 # Study IDs
 NANDA_IDS = [
@@ -206,40 +202,6 @@ def scrape_publications(max_pages=10):
     print(f"✅ Collected {len(all_publications)} total publications")
     return all_publications
 
-def setup_google_sheets():
-    """Set up Google Sheets connection using service account"""
-    creds_json = os.environ.get('GOOGLE_CREDENTIALS')
-    if not creds_json:
-        print("⚠️  No Google credentials found, skipping Sheets upload")
-        return None
-    
-    creds_dict = json.loads(creds_json)
-    scopes = ['https://www.googleapis.com/auth/spreadsheets', 
-              'https://www.googleapis.com/auth/drive']
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    return gspread.authorize(creds)
-
-def save_to_sheets(gc, df, sheet_id, tab_name):
-    """Save dataframe to Google Sheets"""
-    try:
-        sheet = gc.open_by_key(sheet_id)
-        
-        try:
-            worksheet = sheet.worksheet(tab_name)
-            print(f"  ⚠️  Tab '{tab_name}' already exists, updating...")
-        except gspread.exceptions.WorksheetNotFound:
-            print(f"  ➕ Creating new worksheet '{tab_name}'...")
-            worksheet = sheet.add_worksheet(title=tab_name, rows=len(df)+1, cols=len(df.columns))
-        
-        worksheet.clear()
-        worksheet.update([df.columns.values.tolist()] + df.values.tolist())
-        print(f"  ✅ Saved {len(df)} rows to '{tab_name}'")
-        return True
-    
-    except Exception as e:
-        print(f"  ❌ Error saving to Sheets: {e}")
-        return False
-
 # ============================================================================
 # Main Execution
 # ============================================================================
@@ -272,35 +234,33 @@ def main():
     print()
     publications = scrape_publications()
     
-    # Save CSVs locally
+    # Save CSVs
     if results:
         studies_df = pd.DataFrame(results)
         csv_path = f"{OUTPUT_DIR}/nanda_usage_stats_{SCRAPE_DATE}.csv"
         studies_df.to_csv(csv_path, index=False)
         print(f"\n💾 Saved studies CSV: {csv_path}")
+        
+        # Also save a "latest" version for easy access
+        latest_path = f"{OUTPUT_DIR}/nanda_usage_stats_latest.csv"
+        studies_df.to_csv(latest_path, index=False)
+        print(f"💾 Saved latest copy: {latest_path}")
     
     if publications:
         pubs_df = pd.DataFrame(publications)
         csv_path = f"{OUTPUT_DIR}/nanda_publications_{SCRAPE_DATE}.csv"
         pubs_df.to_csv(csv_path, index=False)
         print(f"💾 Saved publications CSV: {csv_path}")
-    
-    # Upload to Google Sheets if credentials available
-    gc = setup_google_sheets()
-    if gc and results:
-        print("\n📊 Uploading to Google Sheets...")
-        study_sheet_id = os.environ.get('STUDY_METRICS_SHEET_ID')
-        pub_sheet_id = os.environ.get('PUBLICATIONS_SHEET_ID')
         
-        if study_sheet_id:
-            save_to_sheets(gc, studies_df, study_sheet_id, SCRAPE_DATE)
-        
-        if pub_sheet_id and publications:
-            save_to_sheets(gc, pubs_df, pub_sheet_id, "Sheet1")
+        # Also save a "latest" version
+        latest_path = f"{OUTPUT_DIR}/nanda_publications_latest.csv"
+        pubs_df.to_csv(latest_path, index=False)
+        print(f"💾 Saved latest copy: {latest_path}")
     
     print(f"\n🎯 Scrape completed!")
     print(f"  📊 Study metrics: {len(results)} studies")
     print(f"  📚 Publications: {len(publications)} total")
+    print(f"\n📁 All files saved to {OUTPUT_DIR}/ directory")
     print("🎉 Done!")
 
 if __name__ == "__main__":
