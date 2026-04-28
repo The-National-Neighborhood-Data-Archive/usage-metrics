@@ -1,121 +1,64 @@
 # NaNDA Usage Metrics Scraper
 
-Automated monthly scraper for NaNDA dataset usage statistics (downloads & citations) from ICPSR and openICPSR.
+Automated monthly scraper that pulls download counts (and related stats) for every NaNDA dataset hosted on ICPSR and openICPSR. Output is a CSV in `data/`.
 
-## How It Works
+## How it works
 
-- Runs automatically on the 1st of every month at 9 AM UTC
-- Scrapes download and citation counts from ICPSR and openICPSR
-- Scrapes publications from NaNDA API
-- Saves results as CSV files in the `data/` directory
-- Commits results back to the repository
+`nanda_usage_scraper.py` calls the ICPSR PCMS APIs directly — no browser, no HTML parsing. It uses two endpoints depending on study type:
 
-## Setup Instructions
+- **Curated ICPSR studies** (5-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`. Returns the full breakdown: data vs. documentation downloads, unique users, and unique institutions.
+- **openICPSR projects** (6-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads (and views/publications, not currently captured).
 
-### 1. Upload Files to GitHub
-
-Upload these files to your repository:
-- `.github/workflows/monthly-scrape.yml` - GitHub Actions workflow
-- `scraper.py` - Main scraping script
-- `requirements.txt` - Python dependencies
-- `README.md` - This file
-- `.gitignore` - Keeps Python cache out of repo
-
-### 2. Test the Workflow
-
-1. Go to the "Actions" tab in your repository
-2. Click "NaNDA Monthly Scraper"
-3. Click "Run workflow" → "Run workflow"
-4. Monitor the progress
-5. Check the `data/` directory for CSV files after it completes
-
-### 3. Done!
-
-That's it! No secrets, no Google setup needed. Just upload and run.
-
-## Output Files
-
-All files are saved in the `data/` directory:
-
-**Study Metrics:**
-- `nanda_usage_stats_YYYY-MM-DD.csv` - Dated snapshots
-- `nanda_usage_stats_latest.csv` - Always contains most recent scrape
-
-**Publications:**
-- `nanda_publications_YYYY-MM-DD.csv` - Dated snapshots
-- `nanda_publications_latest.csv` - Always contains most recent scrape
-
-## Study Types
-
-- **ICPSR** (5-digit IDs): Scraped from `icpsr.umich.edu`
-- **openICPSR** (6-digit IDs): Scraped via DOI redirect (automatically gets latest version)
-
-## CSV Columns
-
-**nanda_usage_stats_*.csv:**
-- `scrape_date` - Date of scrape
-- `study_id` - Study ID number
-- `study_type` - ICPSR or openICPSR
-- `dataset_name` - Full dataset title
-- `downloads` - Number of downloads
-- `citations` - Number of citations
-- `url` - URL scraped
-
-**nanda_publications_*.csv:**
-- `title` - Publication title
-- `authors` - Authors list
-- `year` - Publication year
-- `journal` - Journal name
-- `doi` - DOI if available
-- `url` - Publication URL
-
-## Troubleshooting
-
-**Workflow fails:**
-- Check the Actions tab for error logs
-- Common issues are usually rate limiting or site changes
-
-**403 Forbidden errors:**
-- Some openICPSR studies may block automated access
-- These will be marked as ERROR in the output
-
-**Missing data:**
-- Some studies may not have metrics displayed
-- These will show as 'NA' in the CSV
-
-## Manual Run (Local)
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Install Chrome/ChromeDriver (varies by OS)
-
-# Run scraper
-python scraper.py
-
-# Results will be in data/ directory
-```
+`cloudscraper` is used because `pcms.icpsr.umich.edu` sits behind Cloudflare and plain `requests` gets challenged.
 
 ## Schedule
 
-- **Automatic:** 1st of every month at 9 AM UTC
-- **Manual:** Anytime from the Actions tab
+GitHub Actions runs `nanda_usage_scraper.py` automatically on the 1st of every month at 9 AM UTC, then commits the new CSV back to the repo. The workflow lives at `.github/workflows/monthly-scrape.yml`. You can also trigger a manual run from the **Actions** tab.
 
-## Files Structure
+## Output
 
+All files in `data/`:
+
+- `nanda_usage_stats_YYYY-MM-DD.csv` — dated snapshot from each run
+- `nanda_usage_stats_latest.csv` — always overwritten with the most recent run
+
+### CSV columns
+
+| Column | Description |
+|--------|-------------|
+| `study_id` | ICPSR or openICPSR study/project ID |
+| `total_downloads` | Total downloads (data + docs for curated; total downloads for openICPSR) |
+| `data_downloads` | Data file downloads (curated only; blank for openICPSR) |
+| `documentation_downloads` | Documentation file downloads (curated only; blank for openICPSR) |
+| `unique_users` | Distinct users who downloaded (curated only) |
+| `num_institutions` | Distinct institutions that downloaded (curated only) |
+| `status` | `success` or `error` |
+| `error_message` | Populated when `status == error` |
+| `timestamp` | When this row was scraped |
+
+## Adding a new study
+
+Append the ID to the `STUDY_IDS` list at the top of `nanda_usage_scraper.py`, commit, push. The next monthly run picks it up automatically.
+
+## Running locally
+
+```bash
+cd usage-metrics
+pip install -r requirements.txt
+python nanda_usage_scraper.py
 ```
-usagemetrics/
-├── .github/
-│   └── workflows/
-│       └── monthly-scrape.yml
-├── data/
-│   ├── nanda_usage_stats_YYYY-MM-DD.csv
-│   ├── nanda_usage_stats_latest.csv
-│   ├── nanda_publications_YYYY-MM-DD.csv
-│   └── nanda_publications_latest.csv
-├── scraper.py
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
+
+Output goes to `data/`. Takes about 3 minutes for the full study list with the 1-second polite delay between requests.
+
+## Debugging
+
+If ICPSR changes their page structure or API, the diagnostic scripts in `debug/` are designed to find the new endpoints quickly:
+
+- `debug/inspect_icpsr.py` — fetches a curated study DOI and dumps title, study metrics, JSON-LD, and inline scripts.
+- `debug/openicpsr_probe.py` — fetches an openICPSR project page, finds the React component props, fetches the underlying JS file, and probes plausible API URLs.
+
+Both write their output to a `.txt` file (no need to copy/paste from the terminal).
+
+## Known risks
+
+GitHub Actions sometimes runs from IP ranges Cloudflare treats as bot traffic. If a monthly run fails with a Cloudflare challenge, fall back to running `python nanda_usage_scraper.py` locally that day and committing the CSV manually.
