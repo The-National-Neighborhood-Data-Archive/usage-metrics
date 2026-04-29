@@ -78,6 +78,15 @@ After each scrape, `generate_delta.py` writes a Markdown summary comparing the c
 
 Sections: headline totals + Δ%, top 5 absolute movers, top 5 % movers (baseline ≥ 50), anomalies (had downloads, now zero), new studies. The report runs automatically as part of the GHA workflow.
 
+### Dashboard
+
+`build_dashboard.py` writes a self-contained `dashboard/index.html` with:
+- KPI cards (total downloads, dataset count, unique users)
+- Aggregate monthly downloads chart (Chart.js, curated only)
+- Sortable table of all 103 studies (click any column header)
+
+Open the file directly in a browser, or enable GitHub Pages on the `dashboard/` folder in repo settings to publish at `https://the-national-neighborhood-data-archive.github.io/usage-metrics/` — no code change required.
+
 ## Limitations
 
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
