@@ -69,6 +69,15 @@ Long-format with one row per `(study_id, year, month)`. Months with zero activit
 
 openICPSR projects are excluded — PCMS doesn't expose a per-month feed for them.
 
+### Delta report
+
+After each scrape, `generate_delta.py` writes a Markdown summary comparing the current run to the most recent previous dated snapshot:
+
+- `delta_YYYY-MM-DD.md` — dated snapshot
+- `delta_latest.md` — always overwritten
+
+Sections: headline totals + Δ%, top 5 absolute movers, top 5 % movers (baseline ≥ 50), anomalies (had downloads, now zero), new studies. The report runs automatically as part of the GHA workflow.
+
 ## Limitations
 
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
