@@ -7,7 +7,7 @@ Automated monthly scraper that pulls download counts (and related stats) for eve
 `nanda_usage_scraper.py` calls the ICPSR PCMS APIs directly — no browser, no HTML parsing. It uses two endpoints depending on study type:
 
 - **Curated ICPSR studies** (5-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`. Returns the full breakdown: data vs. documentation downloads, unique users, and unique institutions.
-- **openICPSR projects** (6-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads (and views/publications, not currently captured).
+- **openICPSR projects** (6-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads, total views, and a related-publications count.
 
 `cloudscraper` is used because `pcms.icpsr.umich.edu` sits behind Cloudflare and plain `requests` gets challenged.
 
@@ -27,14 +27,23 @@ All files in `data/`:
 | Column | Description |
 |--------|-------------|
 | `study_id` | ICPSR or openICPSR study/project ID |
+| `dataset_title` | Full dataset title (parsed from the JSON-LD `name` field on the DOI page) |
 | `total_downloads` | Total downloads (data + docs for curated; total downloads for openICPSR) |
+| `total_views` | Total project-page views (openICPSR only; blank for curated) |
+| `publications` | Count of related publications (openICPSR only; blank for curated) |
 | `data_downloads` | Data file downloads (curated only; blank for openICPSR) |
 | `documentation_downloads` | Documentation file downloads (curated only; blank for openICPSR) |
 | `unique_users` | Distinct users who downloaded (curated only) |
 | `num_institutions` | Distinct institutions that downloaded (curated only) |
 | `status` | `success` or `error` |
-| `error_message` | Populated when `status == error` |
+| `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., title 404) |
 | `timestamp` | When this row was scraped |
+
+## Limitations
+
+- **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
+- **openICPSR has no documentation/data split.** The openICPSR usage endpoint returns one `totalDownloads` figure with no breakdown.
+- **Some openICPSR studies have no DOI.** Brand-new studies that haven't been registered with DOI return 404 on the title fetch; `dataset_title` is left blank and the 404 is logged in `error_message`.
 
 ## Adding a new study
 
