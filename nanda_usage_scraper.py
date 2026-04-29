@@ -5,32 +5,28 @@ NaNDA Usage Metrics Scraper
 Pulls download / user / institution counts for every NaNDA study and writes
 them to data/nanda_usage_stats_YYYY-MM-DD.csv.
 
-Two API sources, used together so we get coverage for both curated ICPSR
-(5-digit) AND openICPSR (6-digit) studies:
+Inventory-driven: `inventory.csv` (sibling file) is the source of truth for
+two things:
+  - Dataset title (joined onto each row by study_id)
+  - Routing (the `archive` column — "ICPSR" or "openICPSR" — picks which
+    API set to call; ID-length heuristics are no longer used)
 
-  1. PCMS metrics API (pcms.icpsr.umich.edu):
+API sources:
+
+  1. PCMS metrics API (pcms.icpsr.umich.edu) — for archive=ICPSR (curated):
      - Rich breakdown: data vs documentation downloads, unique users,
        institutions.
-     - Covers CURATED ICPSR only. openICPSR studies come back empty.
 
-  2. PCMS openICPSR project-usage API:
+  2. PCMS openICPSR project-usage API — for archive=openICPSR:
        /pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project
-     - Returns total_downloads and total_views for openICPSR projects.
-       All-time, no date params.
+     - Returns total_downloads and total_views. All-time, no date params.
 
-  3. ICPSR search API (search.icpsr.umich.edu):
-     - Returns the count of related publications for curated ICPSR studies.
-     - Curated only — openICPSR projects don't have a comparable feed.
-
-Logic per study: try PCMS first; if it returns data, use it. Otherwise fall
-back to the openICPSR usage endpoint for at least a total_downloads number.
-Curated rows additionally fetch a publications count from the search API.
+  3. ICPSR search API (search.icpsr.umich.edu) — curated only:
+     - Returns the count of related publications.
 
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
 """
 
-import json
-import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -43,6 +39,7 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 OUTPUT_DIR = Path("data")
+INVENTORY_PATH = Path(__file__).parent / "inventory.csv"
 
 # Date range: NaNDA's first ICPSR release was in 2020.
 START_DATE = "01/01/2020"
@@ -64,9 +61,9 @@ STUDY_IDS = [
     127681, 127682, 128281, 128282, 128841, 128862, 130282, 130542,
     134561, 141121, 155022, 155025, 156024, 156041, 156042, 156043,
     156045, 159902, 159941, 159961, 159981, 160261, 160262, 190141,
-    207966, 208207, 208366, 208682, 208684, 208751, 208906, 208907,
-    209050, 209163, 209164, 209313, 209324, 210581, 220701, 222263,
-    222901, 230941, 237305, 301419, 302343, 302937, 302178,
+    200038, 207966, 208207, 208366, 208682, 208684, 208751, 208906,
+    208907, 209050, 209163, 209164, 209313, 209324, 210581, 220701,
+    222263, 222901, 230941, 237305, 301419, 302343, 302937, 302178,
 ]
 # Dedupe while preserving order.
 STUDY_IDS = list(dict.fromkeys(STUDY_IDS))
@@ -86,16 +83,6 @@ OPENICPSR_USAGE_URL = (
 PUBLICATIONS_API = (
     "https://search.icpsr.umich.edu/search/api/1.0/default/search/"
     "applications/icpsr/modules/icpsr/publications"
-)
-
-# DOI URL patterns for fetching dataset titles via JSON-LD.
-DOI_CURATED   = "https://doi.org/10.3886/ICPSR{sid}"
-DOI_OPENICPSR = "https://doi.org/10.3886/E{sid}"
-
-# Matches <script type="application/ld+json">...</script>
-JSONLD_RE = re.compile(
-    r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
-    re.DOTALL | re.IGNORECASE,
 )
 
 CSV_COLUMNS = [
@@ -128,6 +115,29 @@ TIMESERIES_COLUMNS = [
 # Scraping
 # ---------------------------------------------------------------------------
 
+def load_inventory(path: Path = INVENTORY_PATH) -> dict:
+    """
+    Load inventory.csv into a dict keyed by study_id. Each value is a dict
+    with at least: archive, deposit_via, status, title, doi, url, version,
+    version_date. Used for title lookup and archive-based routing.
+    """
+    inv = pd.read_csv(path, encoding="utf-8")
+    out: dict = {}
+    for _, row in inv.iterrows():
+        sid = int(row["study_id"])
+        out[sid] = {
+            "archive":      row.get("archive"),
+            "deposit_via":  row.get("deposit_via"),
+            "status":       row.get("status"),
+            "title":        row.get("title"),
+            "version":      row.get("version"),
+            "version_date": row.get("version_date"),
+            "doi":          row.get("doi"),
+            "url":          row.get("url"),
+        }
+    return out
+
+
 def make_scraper() -> cloudscraper.CloudScraper:
     """Cloudscraper session that mimics a real browser well enough for ICPSR."""
     scraper = cloudscraper.create_scraper(
@@ -138,25 +148,6 @@ def make_scraper() -> cloudscraper.CloudScraper:
         "Accept-Language": "en-US,en;q=0.9",
     })
     return scraper
-
-
-def fetch_title(study_id: int, scraper) -> str | None:
-    """
-    Fetch the dataset title via the DOI redirect, parsing the JSON-LD
-    <script type="application/ld+json"> block for the `name` field.
-    Returns None if anything fails or the field is missing.
-    """
-    url = (DOI_CURATED if study_id < 100000 else DOI_OPENICPSR).format(sid=study_id)
-    r = scraper.get(url, timeout=30, allow_redirects=True)
-    r.raise_for_status()
-    m = JSONLD_RE.search(r.text)
-    if not m:
-        return None
-    j = json.loads(m.group(1))
-    if isinstance(j, list):
-        j = next((x for x in j if isinstance(x, dict) and "name" in x), {})
-    name = j.get("name") if isinstance(j, dict) else None
-    return str(name).strip() if name else None
 
 
 def fetch_pcms(study_id: int, scraper) -> dict:
@@ -241,8 +232,14 @@ def fetch_publications_count(study_id: int, scraper) -> int:
     return int(r.json().get("response", {}).get("numFound", 0))
 
 
-def scrape_study(study_id: int, scraper) -> dict:
-    """Pull one study's metrics. Returns a dict matching CSV_COLUMNS."""
+def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
+    """Pull one study's metrics. Returns a dict matching CSV_COLUMNS.
+
+    Routing comes from inventory['archive']:
+      - 'ICPSR'     → PCMS endpoints + publications search API
+      - 'openICPSR' → openICPSR project-usage endpoint
+      - anything else (or missing) → log and skip metric fetches
+    """
     row = {
         "study_id": study_id,
         "dataset_title": None,
@@ -259,35 +256,35 @@ def scrape_study(study_id: int, scraper) -> dict:
     }
 
     try:
-        try:
-            row["dataset_title"] = fetch_title(study_id, scraper)
-        except Exception as e:
-            row["error_message"] = f"title fetch: {str(e)[:120]}"
+        inv_entry = inventory.get(study_id, {})
+        row["dataset_title"] = inv_entry.get("title")
+        archive = inv_entry.get("archive")
 
-        pcms = fetch_pcms(study_id, scraper)
-        if pcms["has_data"]:
-            # Curated ICPSR — use PCMS numbers.
-            row["data_downloads"] = pcms["data_downloads"]
-            row["documentation_downloads"] = pcms["documentation_downloads"]
-            row["total_downloads"] = pcms["total_downloads"]
-            row["unique_users"] = pcms["unique_users"]
-            row["num_institutions"] = pcms["num_institutions"]
-            # Publications count from the search API (curated only).
-            try:
-                row["publications"] = fetch_publications_count(study_id, scraper)
-            except Exception as e:
-                msg = f"pubs: {str(e)[:80]}"
-                row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
-        else:
-            # openICPSR — hit the openICPSR project-usage endpoint instead.
+        if archive == "openICPSR":
+            # Includes RDE-deposited datasets — data lives in openICPSR
+            # regardless of deposit pathway.
             try:
                 usage = fetch_openicpsr_usage(study_id, scraper)
                 row["total_downloads"] = usage["total_downloads"]
                 row["total_views"]     = usage["total_views"]
             except Exception as e:
-                # Don't fail the whole row if just the fallback breaks —
-                # record the issue but keep the (zero) PCMS values.
                 row["error_message"] = f"openicpsr-usage fallback: {str(e)[:160]}"
+        elif archive == "ICPSR":
+            # Curated — PCMS endpoints + publications search API.
+            pcms = fetch_pcms(study_id, scraper)
+            if pcms["has_data"]:
+                row["data_downloads"] = pcms["data_downloads"]
+                row["documentation_downloads"] = pcms["documentation_downloads"]
+                row["total_downloads"] = pcms["total_downloads"]
+                row["unique_users"] = pcms["unique_users"]
+                row["num_institutions"] = pcms["num_institutions"]
+                try:
+                    row["publications"] = fetch_publications_count(study_id, scraper)
+                except Exception as e:
+                    msg = f"pubs: {str(e)[:80]}"
+                    row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
+        else:
+            row["error_message"] = f"unknown archive value: {archive!r}"
         return row
 
     except Exception as e:
@@ -296,11 +293,11 @@ def scrape_study(study_id: int, scraper) -> dict:
         return row
 
 
-def scrape_all(study_ids, scraper, delay=REQUEST_DELAY) -> pd.DataFrame:
+def scrape_all(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) -> pd.DataFrame:
     rows = []
     n = len(study_ids)
     for i, sid in enumerate(study_ids, 1):
-        row = scrape_study(sid, scraper)
+        row = scrape_study(sid, scraper, inventory)
         rows.append(row)
         if row["status"] == "success":
             tag = "ok " if row["total_downloads"] else "0  "
@@ -331,16 +328,17 @@ def fetch_timeseries(study_id: int, scraper) -> list:
     return r.json() or []
 
 
-def scrape_timeseries(study_ids, scraper, delay=REQUEST_DELAY) -> pd.DataFrame:
+def scrape_timeseries(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) -> pd.DataFrame:
     """
     Build a long-format monthly time-series for all curated ICPSR studies
-    in `study_ids`. openICPSR (6-digit) IDs are skipped — no time-series
-    endpoint exists for them.
+    in `study_ids`. Curated = inventory['archive'] == 'ICPSR'. openICPSR
+    studies are skipped — no time-series endpoint exists for them.
 
     One row per (study_id, year, month) with separate columns for data
     and documentation downloads. Months with zero activity are omitted.
     """
-    curated = [sid for sid in study_ids if sid < 100000]
+    curated = [sid for sid in study_ids
+               if inventory.get(sid, {}).get("archive") == "ICPSR"]
     n = len(curated)
     print(f"\nFetching monthly time-series for {n} curated studies")
 
@@ -395,9 +393,11 @@ def main() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
     today = datetime.now().strftime("%Y-%m-%d")
 
+    inventory = load_inventory()
+    print(f"Loaded inventory: {len(inventory)} studies")
     print(f"Scraping {len(STUDY_IDS)} NaNDA studies ({START_DATE} -> {END_DATE})")
     scraper = make_scraper()
-    df = scrape_all(STUDY_IDS, scraper)
+    df = scrape_all(STUDY_IDS, scraper, inventory)
 
     dated_path  = OUTPUT_DIR / f"nanda_usage_stats_{today}.csv"
     latest_path = OUTPUT_DIR / "nanda_usage_stats_latest.csv"
@@ -414,7 +414,7 @@ def main() -> None:
     print(f"  {n_ok} success / {n_err} errors / {n_real} with non-zero downloads")
 
     # Monthly time-series (curated ICPSR only)
-    ts_df = scrape_timeseries(STUDY_IDS, scraper)
+    ts_df = scrape_timeseries(STUDY_IDS, scraper, inventory)
     ts_dated  = OUTPUT_DIR / f"nanda_usage_timeseries_{today}.csv"
     ts_latest = OUTPUT_DIR / "nanda_usage_timeseries_latest.csv"
     ts_df.to_csv(ts_dated, index=False)
