@@ -18,7 +18,7 @@ The scraper reads `inventory.csv` at startup for two things:
 1. **Dataset title** — joined onto each row by `study_id`.
 2. **Archive routing** — `archive=ICPSR` → PCMS endpoints; `archive=openICPSR` → openICPSR usage endpoint.
 
-When a new dataset joins NaNDA, append its row to `inventory.csv` AND its ID to `STUDY_IDS` in `nanda_usage_scraper.py`. Both files must stay in sync.
+When a new dataset joins NaNDA, append its row to `inventory.csv` — that's the only file to edit. The scraper derives the list of studies to scrape from the inventory's `study_id` column at runtime.
 
 ## Date window — read before comparing to the PCMS page
 
@@ -105,8 +105,7 @@ Open the file directly in a browser, or enable GitHub Pages on the `dashboard/` 
 ## Adding a new study
 
 1. Append a row to `inventory.csv` with `study_id`, `archive`, `status`, `title`, etc.
-2. Append the same `study_id` to `STUDY_IDS` in `nanda_usage_scraper.py`.
-3. Commit, push. The next monthly run picks it up.
+2. Commit, push. The next monthly run picks it up — `STUDY_IDS` is derived from the inventory at runtime.
 
 ## Running locally
 

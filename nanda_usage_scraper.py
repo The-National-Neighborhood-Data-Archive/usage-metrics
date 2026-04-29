@@ -53,25 +53,9 @@ END_DATE = datetime.now().strftime("%m/%d/%Y")
 # Polite pause between studies.
 REQUEST_DELAY = 1
 
-# Full NaNDA study list (curated ICPSR + openICPSR).
-# When a new study is published, append its ID here.
-STUDY_IDS = [
-    38567, 38649, 38974, 39093, 39378, 38559, 38598, 38579,
-    38586, 38597, 38585, 38605, 38569, 38528, 38580, 38584,
-    38606, 38506, 38858, 110641, 110663, 111107, 111109, 115006,
-    115323, 115404, 115407, 115408, 115543, 115967, 115972, 115973,
-    115981, 117163, 117866, 117921, 119451, 119803, 120088, 120462,
-    120463, 120907, 121741, 123001, 123042, 123541, 123542, 123801,
-    123802, 124721, 124801, 125223, 125781, 126082, 127042, 127262,
-    127681, 127682, 128281, 128282, 128841, 128862, 130282, 130542,
-    134561, 141121, 155022, 155025, 156024, 156041, 156042, 156043,
-    156045, 159902, 159941, 159961, 159981, 160261, 160262, 190141,
-    200038, 207966, 208207, 208366, 208682, 208684, 208751, 208906,
-    208907, 209050, 209163, 209164, 209313, 209324, 210581, 220701,
-    222263, 222901, 230941, 237305, 301419, 302343, 302937, 302178,
-]
-# Dedupe while preserving order.
-STUDY_IDS = list(dict.fromkeys(STUDY_IDS))
+# Full NaNDA study list — derived from inventory.csv (column `study_id`).
+# To add a new study, append a row to inventory.csv; no scraper edit needed.
+STUDY_IDS = [int(x) for x in pd.read_csv(INVENTORY_PATH, encoding="utf-8")["study_id"]]
 
 # PCMS API endpoints (curated ICPSR — rich breakdown)
 PCMS_DOWNLOAD_COUNT = "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount"
