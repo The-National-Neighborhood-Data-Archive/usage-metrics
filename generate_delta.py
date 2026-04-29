@@ -28,7 +28,6 @@ DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
 TOP_N = 5
 PCT_BASELINE_MIN = 50  # ignore studies with previous < 50 for % movers
 TITLE_TRUNC = 70
-NANDA_PREFIX = "National Neighborhood Data Archive (NaNDA): "
 
 
 def find_previous_snapshot():
@@ -66,8 +65,6 @@ def truncate(s, n=TITLE_TRUNC) -> str:
     if pd.isna(s) or not s:
         return "—"
     s = str(s)
-    if s.startswith(NANDA_PREFIX):
-        s = s[len(NANDA_PREFIX):]
     return s if len(s) <= n else s[: n - 1].rstrip() + "…"
 
 

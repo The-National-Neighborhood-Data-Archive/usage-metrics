@@ -41,6 +41,11 @@ import pandas as pd
 OUTPUT_DIR = Path("data")
 INVENTORY_PATH = Path(__file__).parent / "inventory.csv"
 
+# Stripped from titles at inventory load — every NaNDA dataset's title
+# starts with this exact prefix, so removing it surfaces the distinguishing
+# part of the name in tables/charts/reports.
+NANDA_PREFIX = "National Neighborhood Data Archive (NaNDA): "
+
 # Date range: NaNDA's first ICPSR release was in 2020.
 START_DATE = "01/01/2020"
 END_DATE = datetime.now().strftime("%m/%d/%Y")
@@ -120,16 +125,23 @@ def load_inventory(path: Path = INVENTORY_PATH) -> dict:
     Load inventory.csv into a dict keyed by study_id. Each value is a dict
     with at least: archive, deposit_via, status, title, doi, url, version,
     version_date. Used for title lookup and archive-based routing.
+
+    Titles are stripped of the boilerplate "National Neighborhood Data
+    Archive (NaNDA): " prefix at load time so downstream consumers see the
+    distinguishing dataset name directly.
     """
     inv = pd.read_csv(path, encoding="utf-8")
     out: dict = {}
     for _, row in inv.iterrows():
         sid = int(row["study_id"])
+        title = row.get("title")
+        if isinstance(title, str) and title.startswith(NANDA_PREFIX):
+            title = title[len(NANDA_PREFIX):]
         out[sid] = {
             "archive":      row.get("archive"),
             "deposit_via":  row.get("deposit_via"),
             "status":       row.get("status"),
-            "title":        row.get("title"),
+            "title":        title,
             "version":      row.get("version"),
             "version_date": row.get("version_date"),
             "doi":          row.get("doi"),
