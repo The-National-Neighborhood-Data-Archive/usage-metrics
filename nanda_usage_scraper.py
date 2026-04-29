@@ -77,6 +77,8 @@ OPENICPSR_USAGE_URL = (
 CSV_COLUMNS = [
     "study_id",
     "total_downloads",
+    "total_views",
+    "publications",
     "data_downloads",
     "documentation_downloads",
     "unique_users",
@@ -154,18 +156,23 @@ def fetch_pcms(study_id: int, scraper) -> dict:
     return out
 
 
-def fetch_openicpsr_usage(study_id: int, scraper) -> int:
+def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     """
     For openICPSR projects, hit the project-usage view endpoint that the
-    React component on the page itself calls. Returns total_downloads as int
-    (0 if missing).
+    React component on the page itself calls. Returns a dict with keys
+    total_downloads, total_views, publications (all int, 0 if missing).
+
+    Note: the API misspells the publications field as `reladtedPublication`.
     """
     url = OPENICPSR_USAGE_URL.format(sid=study_id)
     r = scraper.get(url, params={"level": "project"}, timeout=30)
     r.raise_for_status()
     j = r.json() or {}
-    total = j.get("totalDownloads", 0)
-    return int(total) if total is not None else 0
+    return {
+        "total_downloads": int(j.get("totalDownloads") or 0),
+        "total_views":     int(j.get("totalViews") or 0),
+        "publications":    int(j.get("reladtedPublication") or 0),
+    }
 
 
 def scrape_study(study_id: int, scraper) -> dict:
@@ -173,6 +180,8 @@ def scrape_study(study_id: int, scraper) -> dict:
     row = {
         "study_id": study_id,
         "total_downloads": 0,
+        "total_views": None,
+        "publications": None,
         "data_downloads": 0,
         "documentation_downloads": 0,
         "unique_users": None,
@@ -194,7 +203,10 @@ def scrape_study(study_id: int, scraper) -> dict:
         else:
             # openICPSR — hit the openICPSR project-usage endpoint instead.
             try:
-                row["total_downloads"] = fetch_openicpsr_usage(study_id, scraper)
+                usage = fetch_openicpsr_usage(study_id, scraper)
+                row["total_downloads"] = usage["total_downloads"]
+                row["total_views"]     = usage["total_views"]
+                row["publications"]    = usage["publications"]
             except Exception as e:
                 # Don't fail the whole row if just the fallback breaks —
                 # record the issue but keep the (zero) PCMS values.
