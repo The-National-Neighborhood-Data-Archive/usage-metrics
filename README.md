@@ -74,6 +74,7 @@ openICPSR projects are excluded — PCMS doesn't expose a per-month feed for the
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
 - **openICPSR has no documentation/data split.** The openICPSR usage endpoint returns one `totalDownloads` figure with no breakdown.
 - **Some openICPSR studies have no DOI.** Brand-new studies that haven't been registered with DOI return 404 on the title fetch; `dataset_title` is left blank and the 404 is logged in `error_message`.
+- **No geographic breakdown.** PCMS does not expose a country/region/state download breakdown for studies. Verified by probing every plausible endpoint and inspecting the dashboard JS bundles; no such widget exists in the public utilization page.
 
 ## Adding a new study
 
