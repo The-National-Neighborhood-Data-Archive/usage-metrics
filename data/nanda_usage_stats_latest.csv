@@ -1,104 +1,105 @@
 study_id,dataset_title,total_downloads,total_views,publications,data_downloads,documentation_downloads,unique_users,num_institutions,status,error_message,timestamp
-38567,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability, Speed, and Adoption by Census Tract and ZIP Code Tabulation Area, United States, 2014-2020",1505,,7.0,462,1043,200.0,62,success,,2026-04-29 14:17:39
-38649,"National Neighborhood Data Archive (NaNDA): Crimes by County, United States, 2002-2014",2203,,5.0,902,1301,222.0,74,success,,2026-04-29 14:17:41
-38974,"National Neighborhood Data Archive (NaNDA): Essential Workers by Census Tract and ZIP Code Tabulation Area, United States, 2016-2020",345,,0.0,116,229,60.0,22,success,,2026-04-29 14:17:43
-39093,"National Neighborhood Data Archive (NaNDA): Home Mortgage Disclosure Act Longitudinal Dataset by Census Tract, United States, 1981-2021",24897,,6.0,7126,17771,269.0,75,success,,2026-04-29 14:17:45
-39378,"National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract and ZIP Code Tabulation Area, United States, 2023",769,,0.0,201,568,67.0,29,success,,2026-04-29 14:17:47
-38559,"National Neighborhood Data Archive (NaNDA): Internet Access by Census Tract and ZIP Code Tabulation Area, United States, 2015-2019",939,,4.0,281,658,135.0,46,success,,2026-04-29 14:17:49
-38598,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract and ZIP Code Tabulation Area, United States, 1985-2023",2905,,26.0,937,1968,229.0,63,success,,2026-04-29 14:17:51
-38579,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by Census Tract and ZIP Code Tabulation Area, United States, 2009-2010 and 2015-2016",1773,,1.0,530,1243,89.0,34,success,,2026-04-29 14:17:53
-38586,"National Neighborhood Data Archive (NaNDA): Parks by Census Tract and ZIP Code Tabulation Area, United States, 2018 and 2022",5179,,36.0,1686,3493,364.0,102,success,,2026-04-29 14:17:55
-38597,"National Neighborhood Data Archive (NaNDA): Polluting Sites by Census Tract and ZIP Code Tabulation Area, United States, 1987-2021",3738,,8.0,1411,2327,193.0,70,success,,2026-04-29 14:17:57
-38585,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by Census Tract and ZIP Code Tabulation Area, United States, 2010 and 2020",1277,,5.0,417,860,96.0,39,success,,2026-04-29 14:18:00
-38605,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by Census Tract and ZIP Code Tabulation Area, United States, 2016-2018 and 2024",2501,,20.0,628,1873,200.0,67,success,,2026-04-29 14:18:02
-38569,"National Neighborhood Data Archive (NaNDA): School District Characteristics and School Counts by Census Tract, ZIP Code Tabulation Area, and School District, 2000-2018",2435,,2.0,942,1493,134.0,51,success,,2026-04-29 14:18:04
-38528,"National Neighborhood Data Archive (NaNDA): Socioeconomic Status and Demographic Characteristics of Census Tracts and ZIP Code Tabulation Areas, United States, 1990-2022",20274,,134.0,5571,14703,862.0,145,success,,2026-04-29 14:18:05
-38580,"National Neighborhood Data Archive (NaNDA): Street Connectivity by Census Tract and ZIP Code Tabulation Area, United States, 2010 and 2020",3901,,8.0,1315,2586,155.0,52,success,,2026-04-29 14:18:08
-38584,"National Neighborhood Data Archive (NaNDA): Traffic Volume by Census Tract and ZIP Code Tabulation Area, United States, 1963-2019",1838,,11.0,559,1279,227.0,58,success,,2026-04-29 14:18:10
-38606,"National Neighborhood Data Archive (NaNDA): Urbanicity by Census Tract, United States, 2010",725,,9.0,240,485,156.0,60,success,,2026-04-29 14:18:12
-38506,"National Neighborhood Data Archive (NaNDA): Voter Registration, Turnout, and Partisanship by County, United States, 2004-2022",4688,,18.0,1113,3575,826.0,200,success,,2026-04-29 14:18:14
-38858,"National Neighborhood Data Archive (NaNDA): Weather by County, United States, 2003-2016",22964,,3.0,10447,12517,99.0,39,success,,2026-04-29 14:18:16
-110641,"National Neighborhood Data Archive (NaNDA): Street Connectivity by Census Tract, United States, 2010",95,987.0,,0,0,,0,success,,2026-04-29 14:18:18
-110663,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract, United States, 2001-2016",385,3522.0,,0,0,,0,success,,2026-04-29 14:18:20
-111107,"National Neighborhood Data Archive (NaNDA): Neighborhood Socioeconomic and Demographic Characteristics of Census Tracts, United States, 2000-2010",324,3927.0,,0,0,,0,success,,2026-04-29 14:18:22
-111109,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by Census Tract, United States, 2016-2018",221,2408.0,,0,0,,0,success,,2026-04-29 14:18:24
-115006,"National Neighborhood Data Archive (NaNDA): Crimes by County, United States, 2002-2014",289,3044.0,,0,0,,0,success,,2026-04-29 14:18:26
-115323,"National Neighborhood Data Archive (NaNDA): Fast-Food Restaurants by Census Tract, United States, 2006-2015",9,2350.0,,0,0,,0,success,,2026-04-29 14:18:29
-115404,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by Census Tract, United States, 2003-2017",340,2533.0,,0,0,,0,success,,2026-04-29 14:18:31
-115407,"National Neighborhood Data Archive (NaNDA): Religious Organizations by Census Tract, United States, 2006-2015",4,362.0,,0,0,,0,success,,2026-04-29 14:18:33
-115408,"National Neighborhood Data Archive (NaNDA): Civic and Social Organizations by Census Tract, United States, 2006-2015",9,542.0,,0,0,,0,success,,2026-04-29 14:18:35
-115543,"National Neighborhood Data Archive (NaNDA):  Arts, Entertainment, and Recreation Organizations by Census Tract, United States, 2003-2017",299,2323.0,,0,0,,0,success,,2026-04-29 14:18:37
-115967,"National Neighborhood Data Archive (NaNDA):  Religious, Civic, and Social Organizations by Census Tract, United States, 2003-2017",267,2159.0,,0,0,,0,success,,2026-04-29 14:18:40
-115972,"National Neighborhood Data Archive (NaNDA):  Retail Establishments by Census Tract, United States, 2003-2017",205,1892.0,,0,0,,0,success,,2026-04-29 14:18:42
-115973,"National Neighborhood Data Archive (NaNDA):  Law Enforcement Organizations by Census Tract, United States, 2003-2017",143,1474.0,,0,0,,0,success,,2026-04-29 14:18:44
-115981,"National Neighborhood Data Archive (NaNDA):  Personal Care Services and Laundromats by Census Tract, United States, 2003-2017",137,1089.0,,0,0,,0,success,,2026-04-29 14:18:47
-117163,"National Neighborhood Data Archive (NaNDA): Social Services by Census Tract, United States, 2003-2017",315,2274.0,,0,0,,0,success,,2026-04-29 14:18:49
-117866,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability, Speed, and Adoption by Census Tract, United States, 2014-2020",228,2399.0,,0,0,,0,success,,2026-04-29 14:18:51
-117921,"National Neighborhood Data Archive (NaNDA): Parks by Census Tract, United States, 2018",403,3676.0,,0,0,,0,success,,2026-04-29 14:18:54
-119451,"National Neighborhood Data Archive (NaNDA):  Socioeconomic Status and Demographic Characteristics of Census Tracts, United States, 2008-2017",529,4563.0,,0,0,,0,success,,2026-04-29 14:18:56
-119803,"National Neighborhood Data Archive (NaNDA): Parks by ZIP Code Tabulation Area, United States, 2018",163,2071.0,,0,0,,0,success,,2026-04-29 14:18:58
-120088,,207,3768.0,,0,0,,0,success,,2026-04-29 14:19:00
-120462,"National Neighborhood Data Archive (NaNDA): Socioeconomic Status and Demographic Characteristics of ZIP Code Tabulation Areas, United States, 2008-2017",533,17219.0,,0,0,,0,success,,2026-04-29 14:19:02
-120463,"National Neighborhood Data Archive (NaNDA): Health Care Services by ZIP Code Tabulation Area, United States, 2003-2017",201,1919.0,,0,0,,0,success,,2026-04-29 14:19:04
-120907,"National Neighborhood Data Archive (NaNDA): Health Care Services by Census Tract, United States, 2003-2017",484,3986.0,,0,0,,0,success,,2026-04-29 14:19:07
-121741,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by ZIP Code Tabulation Area, United States, 2003-2017",88,988.0,,0,0,,0,success,,2026-04-29 14:19:09
-123001,"National Neighborhood Data Archive (NaNDA): Grocery Stores by Census Tract, United States, 2003-2017",371,2509.0,,0,0,,0,success,,2026-04-29 14:19:12
-123042,"National Neighborhood Data Archive (NaNDA): Grocery Stores by ZIP Code Tabulation Area, United States, 2003-2017",134,2015.0,,0,0,,0,success,,2026-04-29 14:19:14
-123541,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, and Convenience Stores by Census Tract, United States, 2003-2017",188,1372.0,,0,0,,0,success,,2026-04-29 14:19:16
-123542,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, and Convenience Stores by ZIP Code Tabulation Area, United States, 2003-2017",51,553.0,,0,0,,0,success,,2026-04-29 14:19:19
-123801,"National Neighborhood Data Archive (NaNDA): Dollar Stores by ZIP Code Tabulation Area, United States, 2003-2017",48,649.0,,0,0,,0,success,,2026-04-29 14:19:21
-123802,"National Neighborhood Data Archive (NaNDA): Dollar Stores by Census Tract, United States, 2003-2017",126,940.0,,0,0,,0,success,,2026-04-29 14:19:23
-124721,"National Neighborhood Data Archive (NaNDA): Religious, Civic, and Social Organizations by ZIP Code Tabulation Area, United States, 2003-2017",115,1663.0,,0,0,,0,success,,2026-04-29 14:19:26
-124801,"National Neighborhood Data Archive (NaNDA): Law Enforcement Organizations by ZIP Code Tabulation Area, United States, 2003-2017",41,447.0,,0,0,,0,success,,2026-04-29 14:19:28
-125223,"National Neighborhood Data Archive (NaNDA): Arts, Entertainment, and Recreation Organizations by ZIP Code Tabulation Area, United States, 2003-2017",104,777.0,,0,0,,0,success,,2026-04-29 14:19:31
-125781,"National Neighborhood Data Archive (NaNDA): Voter Registration, Turnout, and Partisanship by County, United States, 2004-2018",303,4373.0,,0,0,,0,success,,2026-04-29 14:19:33
-126082,"National Neighborhood Data Archive (NaNDA): Social Services by ZIP Code Tabulation Area, United States, 2003-2017",85,732.0,,0,0,,0,success,,2026-04-29 14:19:35
-127042,"National Neighborhood Data Archive (NaNDA): Retail Establishments by ZIP Code Tabulation Area, United States, 2003-2017",68,970.0,,0,0,,0,success,,2026-04-29 14:19:38
-127262,"National Neighborhood Data Archive (NaNDA): Personal Care Services and Laundromats by ZIP Code Tabulation Area, United States, 2003-2017",34,408.0,,0,0,,0,success,,2026-04-29 14:19:40
-127681,"National Neighborhood Data Archive (NaNDA):  Education and Training Services by Census Tract, United States, 2003-2017",158,1051.0,,0,0,,0,success,,2026-04-29 14:19:43
-127682,"National Neighborhood Data Archive (NaNDA): Education and Training Services by ZIP Code Tabulation Area, United States, 2003-2017",27,433.0,,0,0,,0,success,,2026-04-29 14:19:45
-128281,"National Neighborhood Data Archive (NaNDA):  Post Offices and Banks by Census Tract, United States, 2003-2017",115,876.0,,0,0,,0,success,,2026-04-29 14:19:48
-128282,"National Neighborhood Data Archive (NaNDA): Post Offices and Banks by ZIP Code Tabulation Area, United States, 2003-2017",32,387.0,,0,0,,0,success,,2026-04-29 14:19:50
-128841,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability and Speed by ZIP Code Tabulation Area, United States, 2014-2020",273,3679.0,,0,0,,0,success,,2026-04-29 14:19:52
-128862,"National Neighborhood Data Archive (NaNDA): Land Cover by ZIP Code Tabulation Area, United States, 2001-2016",109,1756.0,,0,0,,0,success,,2026-04-29 14:19:55
-130282,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by ZIP Code Tabulation Area, United States, 2016-2018",110,1706.0,,0,0,,0,success,,2026-04-29 14:19:57
-130542,"National Neighborhood Data Archive (NaNDA): Urbanicity by Census Tract, United States, 2010",102,1444.0,,0,0,,0,success,,2026-04-29 14:19:59
-134561,"National Neighborhood Data Archive (NaNDA): Street Connectivity by ZIP Code Tabulation Area, United States, 2010",31,961.0,,0,0,,0,success,,2026-04-29 14:20:02
-141121,,2813,26292.0,,0,0,,0,success,,2026-04-29 14:20:04
-155022,"National Neighborhood Data Archive (NaNDA): Internet Access by Census Tract, United States, 2015-2019",62,425.0,,0,0,,0,success,,2026-04-29 14:20:06
-155025,"National Neighborhood Data Archive (NaNDA): Internet Access by ZIP Code Tabulation Area, United States, 2015-2019",44,411.0,,0,0,,0,success,,2026-04-29 14:20:08
-156024,"National Neighborhood Data Archive (NaNDA): School Counts by Census Tract, United States, 2000-2018",74,457.0,,0,0,,0,success,,2026-04-29 14:20:10
-156041,"National Neighborhood Data Archive (NaNDA): School Counts by ZIP Code Tabulation Area, United States, 2000-2018",36,300.0,,0,0,,0,success,,2026-04-29 14:20:12
-156042,"National Neighborhood Data Archive (NaNDA): School Counts and Characteristics by School District, United States, 2000-2018",61,568.0,,0,0,,0,success,,2026-04-29 14:20:14
-156043,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by Census Tract, United States, 2009-2010 and 2015-2016",63,457.0,,0,0,,0,success,,2026-04-29 14:20:18
-156045,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by ZIP Code Tabulation Area, United States, 2009-2010 and 2015-2016",24,507.0,,0,0,,0,success,,2026-04-29 14:20:20
-159902,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by Census Tract, United States, 2010",56,712.0,,0,0,,0,success,,2026-04-29 14:20:22
-159941,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by ZIP Code Tabulation Area, United States, 2010",18,871.0,,0,0,,0,success,,2026-04-29 14:20:25
-159961,"National Neighborhood Data Archive (NaNDA): Polluting Sites by Census Tract, United States, 2000-2018",125,1015.0,,0,0,,0,success,,2026-04-29 14:20:27
-159981,"National Neighborhood Data Archive (NaNDA): Polluting Sites by ZIP Code Tabulation Area, United States, 2000-2018",58,516.0,,0,0,,0,success,,2026-04-29 14:20:29
-160261,"National Neighborhood Data Archive (NaNDA): Traffic Volume by ZIP Code Tabulation Area, United States, 1963-2019",186,2796.0,,0,0,,0,success,,2026-04-29 14:20:31
-160262,"National Neighborhood Data Archive (NaNDA): Traffic Volume by Census Tract, United States, 1963-2019",197,1975.0,,0,0,,0,success,,2026-04-29 14:20:34
-190141,National Neighborhood Data Archive (NaNDA): Special Data Release for Neighborhood Context and Alzheimer's Disease and Related Dementias,0,679.0,,0,0,,0,success,,2026-04-29 14:20:36
-207966,,282,1119.0,,0,0,,0,success,,2026-04-29 14:20:38
-208207,,276,1543.0,,0,0,,0,success,,2026-04-29 14:20:40
-208366,"National Neighborhood Data Archive (NaNDA): Post Offices and Banks by Census Tract and ZCTA, United States, 1990-2021",78,390.0,,0,0,,0,success,,2026-04-29 14:20:41
-208682,,182,1143.0,,0,0,,0,success,,2026-04-29 14:20:43
-208684,,113,750.0,,0,0,,0,success,,2026-04-29 14:20:45
-208751,,315,1108.0,,0,0,,0,success,,2026-04-29 14:20:46
-208906,,95,343.0,,0,0,,0,success,,2026-04-29 14:20:48
-208907,,228,1819.0,,0,0,,0,success,,2026-04-29 14:20:49
-209050,,391,1885.0,,0,0,,0,success,,2026-04-29 14:20:51
-209163,,204,994.0,,0,0,,0,success,,2026-04-29 14:20:53
-209164,,200,805.0,,0,0,,0,success,,2026-04-29 14:20:54
-209313,,386,1966.0,,0,0,,0,success,,2026-04-29 14:20:56
-209324,,50,266.0,,0,0,,0,success,,2026-04-29 14:20:57
-210581,"National Neighborhood Data Archive (NaNDA): Standardized Area Deprivation Index (ADI) by Census Block Group, United States, 2015, 2020 and 2022",127,7268.0,,0,0,,0,success,,2026-04-29 14:20:59
-220701,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract and ZIP Code Tabulation Area, United States, 1985- 2023",43,369.0,,0,0,,0,success,,2026-04-29 14:21:01
-222263,"National Neighborhood Data Archive (NaNDA): Ophthalmologists by Census Tract and ZCTA, United States, 1990-2021",14,197.0,,0,0,,0,success,,2026-04-29 14:21:03
-222901,"National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract and ZCTA, 2023",41,326.0,,0,0,,0,success,,2026-04-29 14:21:05
-230941,"National Neighborhood Data Archive (NaNDA): PRISM Climate of Census Tracts, United States, 1981-2024",137,1203.0,,0,0,,0,success,,2026-04-29 14:21:07
-237305,"National Neighborhood Data Archive: Air Conditioning Probability by Census Tract, United States, 2016",30,259.0,,0,0,,0,success,,2026-04-29 14:21:09
-301419,,0,0.0,,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E301419,2026-04-29 14:21:11
-302343,,0,0.0,,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E302343,2026-04-29 14:21:13
-302937,,0,0.0,,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E302937,2026-04-29 14:21:14
-302178,,0,0.0,,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E302178,2026-04-29 14:21:15
+38567,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability, Speed, and Adoption by Census Tract and ZIP Code Tabulation Area, United States, 2014-2020",1505,,7.0,462,1043,200.0,62,success,,2026-04-29 15:43:38
+38649,"National Neighborhood Data Archive (NaNDA): Crimes by County, United States, 2002-2014",2203,,5.0,902,1301,222.0,74,success,,2026-04-29 15:43:39
+38974,"National Neighborhood Data Archive (NaNDA): Essential Workers by Census Tract and ZIP Code Tabulation Area, United States, 2016-2020",345,,0.0,116,229,60.0,22,success,,2026-04-29 15:43:41
+39093,"National Neighborhood Data Archive (NaNDA): Home Mortgage Disclosure Act Longitudinal Dataset by Census Tract, United States, 1981-2021",24897,,6.0,7126,17771,269.0,75,success,,2026-04-29 15:43:42
+39378,"National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract and ZIP Code Tabulation Area, United States, 2023",769,,0.0,201,568,67.0,29,success,,2026-04-29 15:43:44
+38559,"National Neighborhood Data Archive (NaNDA): Internet Access by Census Tract and ZIP Code Tabulation Area, United States, 2015-2019",939,,4.0,281,658,135.0,46,success,,2026-04-29 15:43:45
+38598,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract and ZIP Code Tabulation Area, United States, 1985-2023",2905,,26.0,937,1968,229.0,63,success,,2026-04-29 15:43:46
+38579,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by Census Tract and ZIP Code Tabulation Area, United States, 2009-2010 and 2015-2016",1773,,1.0,530,1243,89.0,34,success,,2026-04-29 15:43:48
+38586,"National Neighborhood Data Archive (NaNDA): Parks by Census Tract and ZIP Code Tabulation Area, United States, 2018 and 2022",5179,,36.0,1686,3493,364.0,102,success,,2026-04-29 15:43:49
+38597,"National Neighborhood Data Archive (NaNDA): Polluting Sites by Census Tract and ZIP Code Tabulation Area, United States, 1987-2021",3738,,8.0,1411,2327,193.0,70,success,,2026-04-29 15:43:50
+38585,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by Census Tract and ZIP Code Tabulation Area, United States, 2010 and 2020",1277,,5.0,417,860,96.0,39,success,,2026-04-29 15:43:52
+38605,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by Census Tract and ZIP Code Tabulation Area, United States, 2016-2018 and 2024",2501,,20.0,628,1873,200.0,67,success,,2026-04-29 15:43:53
+38569,"National Neighborhood Data Archive (NaNDA): School District Characteristics and School Counts by Census Tract, ZIP Code Tabulation Area, and School District, 2000-2018",2435,,2.0,942,1493,134.0,51,success,,2026-04-29 15:43:55
+38528,"National Neighborhood Data Archive (NaNDA): Socioeconomic Status and Demographic Characteristics of Census Tracts and ZIP Code Tabulation Areas, United States, 1990-2022",20274,,134.0,5571,14703,862.0,145,success,,2026-04-29 15:43:56
+38580,"National Neighborhood Data Archive (NaNDA): Street Connectivity by Census Tract and ZIP Code Tabulation Area, United States, 2010 and 2020",3901,,8.0,1315,2586,155.0,52,success,,2026-04-29 15:43:58
+38584,"National Neighborhood Data Archive (NaNDA): Traffic Volume by Census Tract and ZIP Code Tabulation Area, United States, 1963-2019",1838,,11.0,559,1279,227.0,58,success,,2026-04-29 15:43:59
+38606,"National Neighborhood Data Archive (NaNDA): Urbanicity by Census Tract, United States, 2010",725,,9.0,240,485,156.0,60,success,,2026-04-29 15:44:01
+38506,"National Neighborhood Data Archive (NaNDA): Voter Registration, Turnout, and Partisanship by County, United States, 2004-2022",4688,,18.0,1113,3575,826.0,200,success,,2026-04-29 15:44:02
+38858,"National Neighborhood Data Archive (NaNDA): Weather by County, United States, 2003-2016",22964,,3.0,10447,12517,99.0,39,success,,2026-04-29 15:44:03
+110641,"National Neighborhood Data Archive (NaNDA): Street Connectivity by Census Tract, United States, 2010",95,988.0,,0,0,,0,success,,2026-04-29 15:44:05
+110663,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract, United States, 2001-2016",385,3522.0,,0,0,,0,success,,2026-04-29 15:44:06
+111107,"National Neighborhood Data Archive (NaNDA): Neighborhood Socioeconomic and Demographic Characteristics of Census Tracts, United States, 2000-2010",324,3928.0,,0,0,,0,success,,2026-04-29 15:44:07
+111109,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by Census Tract, United States, 2016-2018",221,2408.0,,0,0,,0,success,,2026-04-29 15:44:09
+115006,"National Neighborhood Data Archive (NaNDA): Crimes by County, United States, 2002-2014",289,3044.0,,0,0,,0,success,,2026-04-29 15:44:10
+115323,"National Neighborhood Data Archive (NaNDA): Fast-Food Restaurants by Census Tract, United States, 2006-2015",9,2351.0,,0,0,,0,success,,2026-04-29 15:44:12
+115404,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by Census Tract, United States, 2003-2017",340,2534.0,,0,0,,0,success,,2026-04-29 15:44:13
+115407,"National Neighborhood Data Archive (NaNDA): Religious Organizations by Census Tract, United States, 2006-2015",4,363.0,,0,0,,0,success,,2026-04-29 15:44:14
+115408,"National Neighborhood Data Archive (NaNDA): Civic and Social Organizations by Census Tract, United States, 2006-2015",9,543.0,,0,0,,0,success,,2026-04-29 15:44:15
+115543,"National Neighborhood Data Archive (NaNDA):  Arts, Entertainment, and Recreation Organizations by Census Tract, United States, 2003-2017",299,2324.0,,0,0,,0,success,,2026-04-29 15:44:17
+115967,"National Neighborhood Data Archive (NaNDA):  Religious, Civic, and Social Organizations by Census Tract, United States, 2003-2017",267,2160.0,,0,0,,0,success,,2026-04-29 15:44:18
+115972,"National Neighborhood Data Archive (NaNDA):  Retail Establishments by Census Tract, United States, 2003-2017",205,1893.0,,0,0,,0,success,,2026-04-29 15:44:19
+115973,"National Neighborhood Data Archive (NaNDA):  Law Enforcement Organizations by Census Tract, United States, 2003-2017",143,1475.0,,0,0,,0,success,,2026-04-29 15:44:21
+115981,"National Neighborhood Data Archive (NaNDA):  Personal Care Services and Laundromats by Census Tract, United States, 2003-2017",137,1090.0,,0,0,,0,success,,2026-04-29 15:44:22
+117163,"National Neighborhood Data Archive (NaNDA): Social Services by Census Tract, United States, 2003-2017",315,2275.0,,0,0,,0,success,,2026-04-29 15:44:23
+117866,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability, Speed, and Adoption by Census Tract, United States, 2014-2020",228,2399.0,,0,0,,0,success,,2026-04-29 15:44:25
+117921,"National Neighborhood Data Archive (NaNDA): Parks by Census Tract, United States, 2018",403,3679.0,,0,0,,0,success,,2026-04-29 15:44:26
+119451,"National Neighborhood Data Archive (NaNDA):  Socioeconomic Status and Demographic Characteristics of Census Tracts, United States, 2008-2017",529,4565.0,,0,0,,0,success,,2026-04-29 15:44:27
+119803,"National Neighborhood Data Archive (NaNDA): Parks by ZIP Code Tabulation Area, United States, 2018",163,2072.0,,0,0,,0,success,,2026-04-29 15:44:29
+120088,National Neighborhood Data Archive (NaNDA): Code for merging ZCTA level datasets with the UDS Mapper ZIP code to ZCTA crosswalk,207,3769.0,,0,0,,0,success,,2026-04-29 15:44:30
+120462,"National Neighborhood Data Archive (NaNDA): Socioeconomic Status and Demographic Characteristics of ZIP Code Tabulation Areas, United States, 2008-2017",533,17219.0,,0,0,,0,success,,2026-04-29 15:44:31
+120463,"National Neighborhood Data Archive (NaNDA): Health Care Services by ZIP Code Tabulation Area, United States, 2003-2017",201,1920.0,,0,0,,0,success,,2026-04-29 15:44:32
+120907,"National Neighborhood Data Archive (NaNDA): Health Care Services by Census Tract, United States, 2003-2017",484,3986.0,,0,0,,0,success,,2026-04-29 15:44:34
+121741,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by ZIP Code Tabulation Area, United States, 2003-2017",88,989.0,,0,0,,0,success,,2026-04-29 15:44:35
+123001,"National Neighborhood Data Archive (NaNDA): Grocery Stores by Census Tract, United States, 2003-2017",371,2510.0,,0,0,,0,success,,2026-04-29 15:44:37
+123042,"National Neighborhood Data Archive (NaNDA): Grocery Stores by ZIP Code Tabulation Area, United States, 2003-2017",134,2017.0,,0,0,,0,success,,2026-04-29 15:44:38
+123541,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, and Convenience Stores by Census Tract, United States, 2003-2017",188,1373.0,,0,0,,0,success,,2026-04-29 15:44:39
+123542,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, and Convenience Stores by ZIP Code Tabulation Area, United States, 2003-2017",51,554.0,,0,0,,0,success,,2026-04-29 15:44:41
+123801,"National Neighborhood Data Archive (NaNDA): Dollar Stores by ZIP Code Tabulation Area, United States, 2003-2017",48,650.0,,0,0,,0,success,,2026-04-29 15:44:42
+123802,"National Neighborhood Data Archive (NaNDA): Dollar Stores by Census Tract, United States, 2003-2017",126,941.0,,0,0,,0,success,,2026-04-29 15:44:44
+124721,"National Neighborhood Data Archive (NaNDA): Religious, Civic, and Social Organizations by ZIP Code Tabulation Area, United States, 2003-2017",115,1664.0,,0,0,,0,success,,2026-04-29 15:44:45
+124801,"National Neighborhood Data Archive (NaNDA): Law Enforcement Organizations by ZIP Code Tabulation Area, United States, 2003-2017",41,448.0,,0,0,,0,success,,2026-04-29 15:44:46
+125223,"National Neighborhood Data Archive (NaNDA): Arts, Entertainment, and Recreation Organizations by ZIP Code Tabulation Area, United States, 2003-2017",104,778.0,,0,0,,0,success,,2026-04-29 15:44:48
+125781,"National Neighborhood Data Archive (NaNDA): Voter Registration, Turnout, and Partisanship by County, United States, 2004-2018",303,4374.0,,0,0,,0,success,,2026-04-29 15:44:49
+126082,"National Neighborhood Data Archive (NaNDA): Social Services by ZIP Code Tabulation Area, United States, 2003-2017",85,733.0,,0,0,,0,success,,2026-04-29 15:44:51
+127042,"National Neighborhood Data Archive (NaNDA): Retail Establishments by ZIP Code Tabulation Area, United States, 2003-2017",68,971.0,,0,0,,0,success,,2026-04-29 15:44:52
+127262,"National Neighborhood Data Archive (NaNDA): Personal Care Services and Laundromats by ZIP Code Tabulation Area, United States, 2003-2017",34,409.0,,0,0,,0,success,,2026-04-29 15:44:54
+127681,"National Neighborhood Data Archive (NaNDA):  Education and Training Services by Census Tract, United States, 2003-2017",158,1052.0,,0,0,,0,success,,2026-04-29 15:44:55
+127682,"National Neighborhood Data Archive (NaNDA): Education and Training Services by ZIP Code Tabulation Area, United States, 2003-2017",27,433.0,,0,0,,0,success,,2026-04-29 15:44:56
+128281,"National Neighborhood Data Archive (NaNDA):  Post Offices and Banks by Census Tract, United States, 2003-2017",115,877.0,,0,0,,0,success,,2026-04-29 15:44:58
+128282,"National Neighborhood Data Archive (NaNDA): Post Offices and Banks by ZIP Code Tabulation Area, United States, 2003-2017",32,388.0,,0,0,,0,success,,2026-04-29 15:44:59
+128841,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability and Speed by ZIP Code Tabulation Area, United States, 2014-2020",273,3679.0,,0,0,,0,success,,2026-04-29 15:45:00
+128862,"National Neighborhood Data Archive (NaNDA): Land Cover by ZIP Code Tabulation Area, United States, 2001-2016",109,1757.0,,0,0,,0,success,,2026-04-29 15:45:02
+130282,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by ZIP Code Tabulation Area, United States, 2016-2018",110,1707.0,,0,0,,0,success,,2026-04-29 15:45:03
+130542,"National Neighborhood Data Archive (NaNDA): Urbanicity by Census Tract, United States, 2010",102,1444.0,,0,0,,0,success,,2026-04-29 15:45:05
+134561,"National Neighborhood Data Archive (NaNDA): Street Connectivity by ZIP Code Tabulation Area, United States, 2010",31,962.0,,0,0,,0,success,,2026-04-29 15:45:06
+141121,"Historic Redlining Indicator for 2000, 2010, and 2020 US Census Tracts",2814,26292.0,,0,0,,0,success,,2026-04-29 15:45:07
+155022,"National Neighborhood Data Archive (NaNDA): Internet Access by Census Tract, United States, 2015-2019",62,425.0,,0,0,,0,success,,2026-04-29 15:45:08
+155025,"National Neighborhood Data Archive (NaNDA): Internet Access by ZIP Code Tabulation Area, United States, 2015-2019",44,412.0,,0,0,,0,success,,2026-04-29 15:45:10
+156024,"National Neighborhood Data Archive (NaNDA): School Counts by Census Tract, United States, 2000-2018",74,458.0,,0,0,,0,success,,2026-04-29 15:45:11
+156041,"National Neighborhood Data Archive (NaNDA): School Counts by ZIP Code Tabulation Area, United States, 2000-2018",36,301.0,,0,0,,0,success,,2026-04-29 15:45:12
+156042,"National Neighborhood Data Archive (NaNDA): School Counts and Characteristics by School District, United States, 2000-2018",61,569.0,,0,0,,0,success,,2026-04-29 15:45:14
+156043,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by Census Tract, United States, 2009-2010 and 2015-2016",63,457.0,,0,0,,0,success,,2026-04-29 15:45:16
+156045,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by ZIP Code Tabulation Area, United States, 2009-2010 and 2015-2016",24,508.0,,0,0,,0,success,,2026-04-29 15:45:18
+159902,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by Census Tract, United States, 2010",56,713.0,,0,0,,0,success,,2026-04-29 15:45:19
+159941,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by ZIP Code Tabulation Area, United States, 2010",18,872.0,,0,0,,0,success,,2026-04-29 15:45:20
+159961,"National Neighborhood Data Archive (NaNDA): Polluting Sites by Census Tract, United States, 2000-2018",125,1015.0,,0,0,,0,success,,2026-04-29 15:45:21
+159981,"National Neighborhood Data Archive (NaNDA): Polluting Sites by ZIP Code Tabulation Area, United States, 2000-2018",58,517.0,,0,0,,0,success,,2026-04-29 15:45:23
+160261,"National Neighborhood Data Archive (NaNDA): Traffic Volume by ZIP Code Tabulation Area, United States, 1963-2019",186,2797.0,,0,0,,0,success,,2026-04-29 15:45:24
+160262,"National Neighborhood Data Archive (NaNDA): Traffic Volume by Census Tract, United States, 1963-2019",197,1976.0,,0,0,,0,success,,2026-04-29 15:45:25
+190141,National Neighborhood Data Archive (NaNDA): Special Data Release for Neighborhood Context and Alzheimer's Disease and Related Dementias,0,680.0,,0,0,,0,success,,2026-04-29 15:45:26
+200038,"National Neighborhood Data Archive (NaNDA): Libraries by Census Tract and ZIP Code Tabulation Area, United States, 1992-2021",0,0.0,,0,0,,0,success,,2026-04-29 15:45:28
+207966,"National Neighborhood Data Archive (NaNDA): Civic, Social, and Religious Organizations by Census Tract and ZCTA, United States, 1990-2022",282,1120.0,,0,0,,0,success,,2026-04-29 15:45:29
+208207,"National Neighborhood Data Archive (NaNDA): Social Services by Census Tract and ZCTA, United States, 1990-2022",276,1544.0,,0,0,,0,success,,2026-04-29 15:45:30
+208366,"National Neighborhood Data Archive (NaNDA): Post Offices and Banks by Census Tract and ZCTA, United States, 1990-2022",78,391.0,,0,0,,0,success,,2026-04-29 15:45:31
+208682,"National Neighborhood Data Archive (NaNDA): Retail Establishments by Census Tract and ZCTA, United States, 1990-2022",182,1143.0,,0,0,,0,success,,2026-04-29 15:45:33
+208684,"National Neighborhood Data Archive (NaNDA): Law Enforcement by Census Tract and ZCTA, United States, 1990-2022",113,750.0,,0,0,,0,success,,2026-04-29 15:45:34
+208751,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by Census Tract and ZCTA, United States, 1990-2022",315,1108.0,,0,0,,0,success,,2026-04-29 15:45:35
+208906,"National Neighborhood Data Archive (NaNDA): Personal Care Services and Laundry by Census Tract and ZCTA, United States, 1990-2022",95,343.0,,0,0,,0,success,,2026-04-29 15:45:37
+208907,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, Cannabis, Vape, and Convenience Stores by Census Tract and ZCTA, United States, 1990-2022",228,1819.0,,0,0,,0,success,,2026-04-29 15:45:38
+209050,"National Neighborhood Data Archive (NaNDA): Healthcare Services by Census Tract and ZCTA, United States, 1990-2022",391,1885.0,,0,0,,0,success,,2026-04-29 15:45:39
+209163,"National Neighborhood Data Archive (NaNDA): Arts, Entertainment, and Leisure Establishments by Census Tract and ZCTA, United States, 1990-2022",204,994.0,,0,0,,0,success,,2026-04-29 15:45:41
+209164,"National Neighborhood Data Archive (NaNDA): Recreational Establishments by Census Tract and ZCTA, United States, 1990-2022",200,805.0,,0,0,,0,success,,2026-04-29 15:45:42
+209313,"National Neighborhood Data Archive (NaNDA): Grocery and Food Stores by Census Tract and ZCTA, United States, 1990-2022",386,1966.0,,0,0,,0,success,,2026-04-29 15:45:43
+209324,"National Neighborhood Data Archive (NaNDA): Dollar Stores by Census Tract and ZCTA, United States, 1990-2022",50,266.0,,0,0,,0,success,,2026-04-29 15:45:45
+210581,"National Neighborhood Data Archive (NaNDA): Standardized Area Deprivation Index (ADI) by Census Block Group, United States, 2015, 2020 and 2022",127,7273.0,,0,0,,0,success,,2026-04-29 15:45:46
+220701,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract and ZIP Code Tabulation Area, United States, 1985- 2023",43,370.0,,0,0,,0,success,,2026-04-29 15:45:48
+222263,"National Neighborhood Data Archive (NaNDA): Ophthalmologists by Census Tract and ZCTA, United States, 1990-2021",14,197.0,,0,0,,0,success,,2026-04-29 15:45:49
+222901,"National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract and ZCTA, 2023",41,327.0,,0,0,,0,success,,2026-04-29 15:45:50
+230941,"National Neighborhood Data Archive (NaNDA): PRISM Climate of Census Tracts, United States, 1981-2024",137,1204.0,,0,0,,0,success,,2026-04-29 15:45:51
+237305,"National Neighborhood Data Archive: Air Conditioning Probability by Census Tract, United States, 2016",30,261.0,,0,0,,0,success,,2026-04-29 15:45:52
+301419,"National Neighborhood Data Archive (NaNDA): Essential Businesses in Census Tracts or ZIP Code Tabulation Areas, United States, 2020",0,0.0,,0,0,,0,success,,2026-04-29 15:45:54
+302343,"National Neighborhood Data Archive (NaNDA): Training and Vocation Schools by Census Tract and ZCTA, United States, 1990-2022",0,0.0,,0,0,,0,success,,2026-04-29 15:45:55
+302937,"National Neighborhood Data Archive (NaNDA): Broadband Availability by Census Tract and ZIP Code Tabulation Area (ZCTA), United States, 2025. ",0,0.0,,0,0,,0,success,,2026-04-29 15:45:56
+302178,"National Neighborhood Data Archive (NaNDA): Essential Workers by Census Tract and ZIP Code Tabulation Area, United States, 2018-2022",0,0.0,,0,0,,0,success,,2026-04-29 15:45:57

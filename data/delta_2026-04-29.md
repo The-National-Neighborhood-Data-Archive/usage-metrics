@@ -3,9 +3,9 @@ _Comparing against 2026-04-28 (nanda_usage_stats_2026-04-28.csv)._
 
 ## Headline
 
-- **Total downloads (all studies):** 120,368 (was 120,151)
-- **Change:** +217 (+0.2%)
-- **Studies in current run:** 103 (0 new since 2026-04-28)
+- **Total downloads (all studies):** 120,369 (was 120,151)
+- **Change:** +218 (+0.2%)
+- **Studies in current run:** 104 (1 new since 2026-04-28)
 
 ## Top 5 absolute movers (by Δ downloads)
 
@@ -33,4 +33,6 @@ _None._
 
 ## New studies since 2026-04-28
 
-_None._
+| Study | Title | Total downloads |
+|---|---|---:|
+| 200038 | National Neighborhood Data Archive (NaNDA): Libraries by Census Tract… | 0 |
