@@ -30,6 +30,9 @@ outputs/*.csv
 *.json
 !package*.json
 
+# Debug/probe scripts and their output (kept local only)
+debug/
+
 # IDE
 .vscode/
 .idea/
