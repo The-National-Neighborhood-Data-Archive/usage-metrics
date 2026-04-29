@@ -48,6 +48,27 @@ All files in `data/`:
 | `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., title 404) |
 | `timestamp` | When this row was scraped |
 
+### Time-series CSV (curated only)
+
+A second pair of files captures monthly downloads per study, going back to 2020:
+
+- `nanda_usage_timeseries_YYYY-MM-DD.csv` — dated snapshot
+- `nanda_usage_timeseries_latest.csv` — always overwritten with the most recent run
+
+Long-format with one row per `(study_id, year, month)`. Months with zero activity are omitted.
+
+| Column | Description |
+|--------|-------------|
+| `study_id` | ICPSR study ID (curated only) |
+| `year` | Year of activity (e.g., 2024) |
+| `month` | Month 1–12 |
+| `data_downloads` | Data file downloads that month |
+| `documentation_downloads` | Documentation downloads that month |
+| `total_downloads` | Sum of the two |
+| `timestamp` | When this snapshot was scraped (same value for every row in a run) |
+
+openICPSR projects are excluded — PCMS doesn't expose a per-month feed for them.
+
 ## Limitations
 
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.

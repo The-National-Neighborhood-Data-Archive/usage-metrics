@@ -113,6 +113,16 @@ CSV_COLUMNS = [
     "timestamp",
 ]
 
+TIMESERIES_COLUMNS = [
+    "study_id",
+    "year",
+    "month",
+    "data_downloads",
+    "documentation_downloads",
+    "total_downloads",
+    "timestamp",
+]
+
 
 # ---------------------------------------------------------------------------
 # Scraping
@@ -307,6 +317,76 @@ def scrape_all(study_ids, scraper, delay=REQUEST_DELAY) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=CSV_COLUMNS)
 
 
+def fetch_timeseries(study_id: int, scraper) -> list:
+    """
+    Pull the monthly download time-series for a curated ICPSR study.
+    PCMS /downloadCount returns one item per (year, month, type) bucket.
+    Returns the raw items list (each dict has month, year, downloads, type).
+    """
+    params = {"studyId": study_id, "startDt": START_DATE, "endDt": END_DATE}
+    referer = f"https://pcms.icpsr.umich.edu/pcms/metrics/studies/{study_id}/utilization"
+    r = scraper.get(PCMS_DOWNLOAD_COUNT, params=params,
+                    headers={"Referer": referer}, timeout=30)
+    r.raise_for_status()
+    return r.json() or []
+
+
+def scrape_timeseries(study_ids, scraper, delay=REQUEST_DELAY) -> pd.DataFrame:
+    """
+    Build a long-format monthly time-series for all curated ICPSR studies
+    in `study_ids`. openICPSR (6-digit) IDs are skipped — no time-series
+    endpoint exists for them.
+
+    One row per (study_id, year, month) with separate columns for data
+    and documentation downloads. Months with zero activity are omitted.
+    """
+    curated = [sid for sid in study_ids if sid < 100000]
+    n = len(curated)
+    print(f"\nFetching monthly time-series for {n} curated studies")
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    long_rows = []
+    for i, sid in enumerate(curated, 1):
+        try:
+            items = fetch_timeseries(sid, scraper)
+            for item in items:
+                long_rows.append({
+                    "study_id": sid,
+                    "year":  int(item["year"]),
+                    "month": int(item["month"]),
+                    "type":  item.get("type"),
+                    "downloads": int(item.get("downloads") or 0),
+                })
+            print(f"  [{i:>3}/{n}] {sid:<7} ok   {len(items)} buckets")
+        except Exception as e:
+            print(f"  [{i:>3}/{n}] {sid:<7} ERR  {str(e)[:80]}")
+        if i < n:
+            time.sleep(delay)
+
+    if not long_rows:
+        return pd.DataFrame(columns=TIMESERIES_COLUMNS)
+
+    long_df = pd.DataFrame(long_rows)
+    wide = (long_df
+            .pivot_table(index=["study_id", "year", "month"],
+                         columns="type", values="downloads",
+                         aggfunc="sum", fill_value=0)
+            .reset_index())
+    wide.columns.name = None
+    # Ensure both type columns exist even if one type never appeared.
+    for col in ("data", "documentation"):
+        if col not in wide.columns:
+            wide[col] = 0
+    wide = wide.rename(columns={
+        "data": "data_downloads",
+        "documentation": "documentation_downloads",
+    })
+    wide["total_downloads"] = wide["data_downloads"] + wide["documentation_downloads"]
+    wide["timestamp"] = timestamp
+    wide = wide.sort_values(["study_id", "year", "month"]).reset_index(drop=True)
+    return wide[TIMESERIES_COLUMNS]
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -332,6 +412,19 @@ def main() -> None:
     print(f"Wrote {dated_path}")
     print(f"Wrote {latest_path}")
     print(f"  {n_ok} success / {n_err} errors / {n_real} with non-zero downloads")
+
+    # Monthly time-series (curated ICPSR only)
+    ts_df = scrape_timeseries(STUDY_IDS, scraper)
+    ts_dated  = OUTPUT_DIR / f"nanda_usage_timeseries_{today}.csv"
+    ts_latest = OUTPUT_DIR / "nanda_usage_timeseries_latest.csv"
+    ts_df.to_csv(ts_dated, index=False)
+    ts_df.to_csv(ts_latest, index=False)
+
+    print()
+    print(f"Wrote {ts_dated}")
+    print(f"Wrote {ts_latest}")
+    print(f"  {len(ts_df):,} monthly rows across "
+          f"{ts_df['study_id'].nunique() if len(ts_df) else 0} curated studies")
 
 
 if __name__ == "__main__":
