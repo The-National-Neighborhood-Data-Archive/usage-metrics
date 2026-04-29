@@ -31,6 +31,7 @@ OUTPUT_DIR = Path("dashboard")
 LATEST_CSV  = DATA_DIR / "nanda_usage_stats_latest.csv"
 TIMESERIES_CSV = DATA_DIR / "nanda_usage_timeseries_latest.csv"
 DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
+NANDA_PREFIX = "National Neighborhood Data Archive (NaNDA): "
 
 
 def find_previous_snapshot():
@@ -115,7 +116,8 @@ def main() -> None:
     for _, r in merged.iterrows():
         title = r.get("dataset_title")
         title_str = "" if pd.isna(title) else str(title)
-        title_short = title_str if len(title_str) <= 90 else title_str[:89].rstrip() + "…"
+        title_display = title_str[len(NANDA_PREFIX):] if title_str.startswith(NANDA_PREFIX) else title_str
+        title_short = title_display if len(title_display) <= 90 else title_display[:89].rstrip() + "…"
         table_rows.append({
             "study_id":   int(r["study_id"]),
             "title":      title_str,
