@@ -1,45 +1,25 @@
-# NaNDA Usage Metrics Scraper
+# NaNDA Usage Metrics
 
-Automated monthly scraper that pulls download counts (and related stats) for every NaNDA dataset hosted on ICPSR and openICPSR. Output is a CSV in `data/`.
+The National Neighborhood Data Archive (NaNDA) publishes contextual data on US neighborhoods — pollution, parks, schools, transit, demographics, and more. This repository tracks who's actually using each dataset: monthly download counts, related publications, unique institutions, and historical trends, pulled from ICPSR and openICPSR.
 
-## How it works
+**Live dashboard:** [the-national-neighborhood-data-archive.github.io/usage-metrics](https://the-national-neighborhood-data-archive.github.io/usage-metrics/)
 
-`nanda_usage_scraper.py` calls the ICPSR PCMS APIs directly — no browser, no HTML parsing. Routing is driven by `inventory.csv`'s `archive` column (not by ID length, which is unreliable for newer deposit pathways):
+## What's in this repo
 
-- **`archive=ICPSR`** (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`. Returns the full breakdown: data vs. documentation downloads, unique users, and unique institutions.
-- **`archive=openICPSR`**: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads and total views.
-- **Publications search API** (curated only): `search.icpsr.umich.edu/search/api/1.0/default/search/applications/icpsr/modules/icpsr/publications?STUDYQ={id}`. Returns a Solr-style response; we read `response.numFound` for the count.
+A Python scraper (`nanda_usage_scraper.py`) runs monthly via GitHub Actions, hitting ICPSR's PCMS APIs for every dataset listed in `inventory.csv`. It produces a monthly snapshot CSV, a long-format time-series CSV going back to 2020, a Markdown delta report comparing the latest run to the previous one, and a self-contained HTML dashboard. `inventory.csv` is the single source of truth for what gets tracked — append a row there to add a dataset.
 
-Dataset titles are read from `inventory.csv` (no live fetch). `cloudscraper` is used because `pcms.icpsr.umich.edu` sits behind Cloudflare and plain `requests` gets challenged.
+## Outputs
 
-## Inventory dependency
+All under `data/` unless noted:
 
-The scraper reads `inventory.csv` at startup for two things:
-1. **Dataset title** — joined onto each row by `study_id`.
-2. **Archive routing** — `archive=ICPSR` → PCMS endpoints; `archive=openICPSR` → openICPSR usage endpoint.
+- **Monthly snapshot** — `nanda_usage_stats_YYYY-MM-DD.csv` (dated) and `nanda_usage_stats_latest.csv` (always overwritten). One row per dataset.
+- **Time-series** — `nanda_usage_timeseries_*.csv`. Long-format monthly buckets per curated dataset, going back to 2020.
+- **Delta report** — `delta_*.md`. Plain-English summary of what changed since the last snapshot: total downloads, biggest movers, suspicious zeros, newly tracked datasets.
+- **Dashboard** — `docs/index.html`. KPI cards, an aggregate monthly downloads chart, and a sortable table of every dataset. Published via GitHub Pages.
 
-When a new dataset joins NaNDA, append its row to `inventory.csv` — that's the only file to edit. The scraper derives the list of studies to scrape from the inventory's `study_id` column at runtime.
+## CSV schema
 
-## Date window — read before comparing to the PCMS page
-
-The scraper passes `startDt=01/01/2020, endDt=today` to PCMS — **lifetime since NaNDA's first ICPSR release**.
-
-The public PCMS utilization page at `pcms.icpsr.umich.edu/pcms/metrics/studies/{id}/utilization` defaults to **the last 3 years**. So our `total_downloads` will routinely run higher than the page's headline number — by exactly the count of pre-(today − 3 years) activity. That's expected, not a bug.
-
-To reconcile manually, set the page's Start Date to `01/01/2020` and End Date to today, then click **Go**. The page numbers will then match what the scraper records.
-
-## Schedule
-
-GitHub Actions runs `nanda_usage_scraper.py` automatically on the 1st of every month at 9 AM UTC, then commits the new CSV back to the repo. The workflow lives at `.github/workflows/monthly-scrape.yml`. You can also trigger a manual run from the **Actions** tab.
-
-## Output
-
-All files in `data/`:
-
-- `nanda_usage_stats_YYYY-MM-DD.csv` — dated snapshot from each run
-- `nanda_usage_stats_latest.csv` — always overwritten with the most recent run
-
-### CSV columns
+### Monthly snapshot (`nanda_usage_stats_*.csv`)
 
 | Column | Description |
 |--------|-------------|
@@ -56,14 +36,9 @@ All files in `data/`:
 | `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value) |
 | `timestamp` | When this row was scraped |
 
-### Time-series CSV (curated only)
+### Time-series (`nanda_usage_timeseries_*.csv`)
 
-A second pair of files captures monthly downloads per study, going back to 2020:
-
-- `nanda_usage_timeseries_YYYY-MM-DD.csv` — dated snapshot
-- `nanda_usage_timeseries_latest.csv` — always overwritten with the most recent run
-
-Long-format with one row per `(study_id, year, month)`. Months with zero activity are omitted.
+Long-format with one row per `(study_id, year, month)`. Months with zero activity are omitted. Curated ICPSR datasets only — PCMS doesn't expose a per-month feed for openICPSR.
 
 | Column | Description |
 |--------|-------------|
@@ -75,25 +50,35 @@ Long-format with one row per `(study_id, year, month)`. Months with zero activit
 | `total_downloads` | Sum of the two |
 | `timestamp` | When this snapshot was scraped (same value for every row in a run) |
 
-openICPSR projects are excluded — PCMS doesn't expose a per-month feed for them.
+## How it works
 
-### Delta report
+The scraper calls ICPSR's PCMS APIs directly. Routing comes from `inventory.csv`'s `archive` column:
 
-After each scrape, `generate_delta.py` writes a Markdown summary comparing the current run to the most recent previous dated snapshot:
+- **`archive=ICPSR`** (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution` — full breakdown of data vs. documentation downloads, unique users, and institutions.
+- **`archive=openICPSR`**: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project` — total downloads and total views.
+- **Publications** (curated only): `search.icpsr.umich.edu/.../publications?STUDYQ={id}` — Solr search API; we read `response.numFound` for the count.
 
-- `delta_YYYY-MM-DD.md` — dated snapshot
-- `delta_latest.md` — always overwritten
+Dataset titles are read from `inventory.csv` at startup, not fetched live. `cloudscraper` handles `pcms.icpsr.umich.edu`'s Cloudflare challenge.
 
-Sections: headline totals + Δ%, top 5 absolute movers, top 5 % movers (baseline ≥ 50), anomalies (had downloads, now zero), new studies. The report runs automatically as part of the GHA workflow.
+## Maintaining the inventory
 
-### Dashboard
+`inventory.csv` is the single file to edit when datasets are added or removed. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`. To add a dataset, append a row, commit, and push — the next monthly run picks it up automatically.
 
-`build_dashboard.py` writes a self-contained `docs/index.html` with:
-- KPI cards (total downloads, dataset count, unique users)
-- Aggregate monthly downloads chart (Chart.js, curated only)
-- Sortable table of all 104 studies (click any column header)
+## Running locally
 
-Open the file directly in a browser, or publish via GitHub Pages: **Settings → Pages → Source: Deploy from a branch → Branch: main / folder: /docs**. (GitHub Pages only allows publishing from `/` or `/docs`, which is why the file lives in `docs/`.) Once enabled, the dashboard is live at `https://the-national-neighborhood-data-archive.github.io/usage-metrics/`.
+GitHub Actions runs the full pipeline (scraper + delta report + dashboard build) on the 1st of every month at 9 AM UTC and commits results back to the repo (`.github/workflows/monthly-scrape.yml`). Manual runs happen from the **Actions** tab.
+
+To run locally:
+
+```bash
+cd usage-metrics
+pip install -r requirements.txt
+python nanda_usage_scraper.py     # ~3 min for 104 studies (1-second polite delay)
+python generate_delta.py          # writes data/delta_*.md
+python build_dashboard.py         # writes docs/index.html
+```
+
+To publish the dashboard, enable GitHub Pages: **Settings → Pages → Source: Deploy from a branch → Branch: `main` / folder: `/docs`**. Pages only allows publishing from `/` or `/docs`, which is why the file lives in `docs/`.
 
 ## Limitations
 
@@ -102,30 +87,10 @@ Open the file directly in a browser, or publish via GitHub Pages: **Settings →
 - **No geographic breakdown.** PCMS does not expose a country/region/state download breakdown for studies. Verified by probing every plausible endpoint and inspecting the dashboard JS bundles; no such widget exists in the public utilization page.
 - **RDE-deposited datasets return zero usage.** Studies with `deposit_via=RDE` in the inventory (currently 5 rows: 200038, 301419, 302178, 302343, 302937) live in openICPSR but consistently return zero downloads/views from the openICPSR endpoint. Cause unconfirmed — could be too new, or RDE deposits may not yet feed the same metrics pipeline. Future probing target.
 
-## Adding a new study
+## Notes
 
-1. Append a row to `inventory.csv` with `study_id`, `archive`, `status`, `title`, etc.
-2. Commit, push. The next monthly run picks it up — `STUDY_IDS` is derived from the inventory at runtime.
+**Date window — read before comparing to the PCMS page.** The scraper passes `startDt=01/01/2020, endDt=today` to PCMS — lifetime since NaNDA's first ICPSR release. The public utilization page at `pcms.icpsr.umich.edu/pcms/metrics/studies/{id}/utilization` defaults to the last 3 years, so our `total_downloads` will run higher than the page's headline number by exactly the count of pre-(today − 3 years) activity. To reconcile manually, set the page's Start Date to `01/01/2020` and click **Go**.
 
-## Running locally
+**Cloudflare on GHA.** GitHub Actions sometimes runs from IP ranges Cloudflare treats as bot traffic. If a monthly run fails with a Cloudflare challenge, fall back to running `python nanda_usage_scraper.py` locally and committing the results manually.
 
-```bash
-cd usage-metrics
-pip install -r requirements.txt
-python nanda_usage_scraper.py
-```
-
-Output goes to `data/`. Takes about 3 minutes for the full study list with the 1-second polite delay between requests.
-
-## Debugging
-
-If ICPSR changes their page structure or API, the diagnostic scripts in `debug/` are designed to find the new endpoints quickly:
-
-- `debug/inspect_icpsr.py` — fetches a curated study DOI and dumps title, study metrics, JSON-LD, and inline scripts.
-- `debug/openicpsr_probe.py` — fetches an openICPSR project page, finds the React component props, fetches the underlying JS file, and probes plausible API URLs.
-
-Both write their output to a `.txt` file (no need to copy/paste from the terminal).
-
-## Known risks
-
-GitHub Actions sometimes runs from IP ranges Cloudflare treats as bot traffic. If a monthly run fails with a Cloudflare challenge, fall back to running `python nanda_usage_scraper.py` locally that day and committing the CSV manually.
+**Diagnostic scripts.** Probe scripts in `debug/` (kept local, not pushed) help locate new endpoints if ICPSR changes its page structure or API.
