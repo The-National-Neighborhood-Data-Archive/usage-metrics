@@ -1,104 +1,104 @@
-study_id,total_downloads,total_views,publications,data_downloads,documentation_downloads,unique_users,num_institutions,status,error_message,timestamp
-38567,1505,,,462,1043,200.0,62,success,,2026-04-29 12:29:42
-38649,2203,,,902,1301,222.0,74,success,,2026-04-29 12:29:43
-38974,345,,,116,229,60.0,22,success,,2026-04-29 12:29:45
-39093,24897,,,7126,17771,269.0,75,success,,2026-04-29 12:29:46
-39378,769,,,201,568,67.0,29,success,,2026-04-29 12:29:48
-38559,939,,,281,658,135.0,46,success,,2026-04-29 12:29:49
-38598,2905,,,937,1968,229.0,63,success,,2026-04-29 12:29:50
-38579,1773,,,530,1243,89.0,34,success,,2026-04-29 12:29:52
-38586,5179,,,1686,3493,364.0,102,success,,2026-04-29 12:29:53
-38597,3738,,,1411,2327,193.0,70,success,,2026-04-29 12:29:54
-38585,1277,,,417,860,96.0,39,success,,2026-04-29 12:29:56
-38605,2501,,,628,1873,200.0,67,success,,2026-04-29 12:29:57
-38569,2435,,,942,1493,134.0,51,success,,2026-04-29 12:29:58
-38528,20274,,,5571,14703,862.0,145,success,,2026-04-29 12:30:00
-38580,3901,,,1315,2586,155.0,52,success,,2026-04-29 12:30:02
-38584,1838,,,559,1279,227.0,58,success,,2026-04-29 12:30:03
-38606,725,,,240,485,156.0,60,success,,2026-04-29 12:30:04
-38506,4688,,,1113,3575,826.0,200,success,,2026-04-29 12:30:06
-38858,22964,,,10447,12517,99.0,39,success,,2026-04-29 12:30:07
-110641,95,981.0,5.0,0,0,,0,success,,2026-04-29 12:30:09
-110663,385,3518.0,3.0,0,0,,0,success,,2026-04-29 12:30:10
-111107,324,3923.0,5.0,0,0,,0,success,,2026-04-29 12:30:11
-111109,221,2405.0,5.0,0,0,,0,success,,2026-04-29 12:30:13
-115006,289,3040.0,14.0,0,0,,0,success,,2026-04-29 12:30:14
-115323,9,2348.0,4.0,0,0,,0,success,,2026-04-29 12:30:16
-115404,340,2531.0,7.0,0,0,,0,success,,2026-04-29 12:30:17
-115407,4,360.0,5.0,0,0,,0,success,,2026-04-29 12:30:18
-115408,9,540.0,4.0,0,0,,0,success,,2026-04-29 12:30:20
-115543,299,2321.0,7.0,0,0,,0,success,,2026-04-29 12:30:21
-115967,267,2157.0,7.0,0,0,,0,success,,2026-04-29 12:30:22
-115972,205,1890.0,7.0,0,0,,0,success,,2026-04-29 12:30:24
-115973,143,1472.0,7.0,0,0,,0,success,,2026-04-29 12:30:25
-115981,137,1087.0,7.0,0,0,,0,success,,2026-04-29 12:30:27
-117163,315,2272.0,8.0,0,0,,0,success,,2026-04-29 12:30:28
-117866,228,2396.0,14.0,0,0,,0,success,,2026-04-29 12:30:29
-117921,403,3674.0,3.0,0,0,,0,success,,2026-04-29 12:30:31
-119451,529,4559.0,5.0,0,0,,0,success,,2026-04-29 12:30:32
-119803,163,2069.0,5.0,0,0,,0,success,,2026-04-29 12:30:34
-120088,207,3768.0,2.0,0,0,,0,success,,2026-04-29 12:30:35
-120462,533,17214.0,7.0,0,0,,0,success,,2026-04-29 12:30:36
-120463,201,1917.0,10.0,0,0,,0,success,,2026-04-29 12:30:38
-120907,484,3983.0,8.0,0,0,,0,success,,2026-04-29 12:30:39
-121741,88,986.0,10.0,0,0,,0,success,,2026-04-29 12:30:41
-123001,371,2507.0,7.0,0,0,,0,success,,2026-04-29 12:30:42
-123042,134,2013.0,10.0,0,0,,0,success,,2026-04-29 12:30:44
-123541,188,1370.0,7.0,0,0,,0,success,,2026-04-29 12:30:45
-123542,51,551.0,10.0,0,0,,0,success,,2026-04-29 12:30:46
-123801,48,647.0,10.0,0,0,,0,success,,2026-04-29 12:30:48
-123802,126,938.0,7.0,0,0,,0,success,,2026-04-29 12:30:50
-124721,115,1661.0,9.0,0,0,,0,success,,2026-04-29 12:30:51
-124801,41,445.0,10.0,0,0,,0,success,,2026-04-29 12:30:52
-125223,104,775.0,10.0,0,0,,0,success,,2026-04-29 12:30:54
-125781,303,4370.0,18.0,0,0,,0,success,,2026-04-29 12:30:55
-126082,85,730.0,10.0,0,0,,0,success,,2026-04-29 12:30:57
-127042,68,968.0,10.0,0,0,,0,success,,2026-04-29 12:30:59
-127262,34,406.0,10.0,0,0,,0,success,,2026-04-29 12:31:00
-127681,158,1049.0,6.0,0,0,,0,success,,2026-04-29 12:31:02
-127682,27,430.0,9.0,0,0,,0,success,,2026-04-29 12:31:03
-128281,115,874.0,7.0,0,0,,0,success,,2026-04-29 12:31:05
-128282,32,385.0,10.0,0,0,,0,success,,2026-04-29 12:31:06
-128841,273,3676.0,12.0,0,0,,0,success,,2026-04-29 12:31:08
-128862,109,1754.0,5.0,0,0,,0,success,,2026-04-29 12:31:09
-130282,110,1704.0,5.0,0,0,,0,success,,2026-04-29 12:31:10
-130542,102,1441.0,2.0,0,0,,0,success,,2026-04-29 12:31:12
-134561,31,959.0,8.0,0,0,,0,success,,2026-04-29 12:31:13
-141121,2813,26292.0,3.0,0,0,,0,success,,2026-04-29 12:31:14
-155022,62,422.0,2.0,0,0,,0,success,,2026-04-29 12:31:16
-155025,44,409.0,5.0,0,0,,0,success,,2026-04-29 12:31:17
-156024,74,455.0,6.0,0,0,,0,success,,2026-04-29 12:31:18
-156041,36,298.0,6.0,0,0,,0,success,,2026-04-29 12:31:20
-156042,61,566.0,42.0,0,0,,0,success,,2026-04-29 12:31:21
-156043,63,454.0,9.0,0,0,,0,success,,2026-04-29 12:31:24
-156045,24,505.0,9.0,0,0,,0,success,,2026-04-29 12:31:25
-159902,56,709.0,5.0,0,0,,0,success,,2026-04-29 12:31:26
-159941,18,869.0,3.0,0,0,,0,success,,2026-04-29 12:31:28
-159961,125,1012.0,5.0,0,0,,0,success,,2026-04-29 12:31:29
-159981,58,514.0,5.0,0,0,,0,success,,2026-04-29 12:31:31
-160261,186,2794.0,5.0,0,0,,0,success,,2026-04-29 12:31:32
-160262,197,1973.0,5.0,0,0,,0,success,,2026-04-29 12:31:33
-190141,0,677.0,0.0,0,0,,0,success,,2026-04-29 12:31:35
-207966,282,1119.0,9.0,0,0,,0,success,,2026-04-29 12:31:36
-208207,276,1543.0,10.0,0,0,,0,success,,2026-04-29 12:31:37
-208366,78,388.0,6.0,0,0,,0,success,,2026-04-29 12:31:39
-208682,182,1142.0,7.0,0,0,,0,success,,2026-04-29 12:31:40
-208684,113,750.0,2.0,0,0,,0,success,,2026-04-29 12:31:42
-208751,315,1108.0,11.0,0,0,,0,success,,2026-04-29 12:31:43
-208906,95,343.0,2.0,0,0,,0,success,,2026-04-29 12:31:44
-208907,228,1819.0,12.0,0,0,,0,success,,2026-04-29 12:31:46
-209050,391,1885.0,11.0,0,0,,0,success,,2026-04-29 12:31:47
-209163,204,993.0,8.0,0,0,,0,success,,2026-04-29 12:31:49
-209164,200,805.0,7.0,0,0,,0,success,,2026-04-29 12:31:50
-209313,386,1964.0,12.0,0,0,,0,success,,2026-04-29 12:31:51
-209324,50,266.0,8.0,0,0,,0,success,,2026-04-29 12:31:53
-210581,127,7266.0,7.0,0,0,,0,success,,2026-04-29 12:31:54
-220701,43,367.0,0.0,0,0,,0,success,,2026-04-29 12:31:56
-222263,14,194.0,0.0,0,0,,0,success,,2026-04-29 12:31:57
-222901,41,324.0,0.0,0,0,,0,success,,2026-04-29 12:31:58
-230941,137,1201.0,3.0,0,0,,0,success,,2026-04-29 12:32:00
-237305,30,253.0,3.0,0,0,,0,success,,2026-04-29 12:32:01
-301419,0,0.0,0.0,0,0,,0,success,,2026-04-29 12:32:02
-302343,0,0.0,0.0,0,0,,0,success,,2026-04-29 12:32:03
-302937,0,0.0,0.0,0,0,,0,success,,2026-04-29 12:32:05
-302178,0,0.0,0.0,0,0,,0,success,,2026-04-29 12:32:06
+study_id,dataset_title,total_downloads,total_views,publications,data_downloads,documentation_downloads,unique_users,num_institutions,status,error_message,timestamp
+38567,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability, Speed, and Adoption by Census Tract and ZIP Code Tabulation Area, United States, 2014-2020",1505,,,462,1043,200.0,62,success,,2026-04-29 12:58:23
+38649,"National Neighborhood Data Archive (NaNDA): Crimes by County, United States, 2002-2014",2203,,,902,1301,222.0,74,success,,2026-04-29 12:58:26
+38974,"National Neighborhood Data Archive (NaNDA): Essential Workers by Census Tract and ZIP Code Tabulation Area, United States, 2016-2020",345,,,116,229,60.0,22,success,,2026-04-29 12:58:28
+39093,"National Neighborhood Data Archive (NaNDA): Home Mortgage Disclosure Act Longitudinal Dataset by Census Tract, United States, 1981-2021",24897,,,7126,17771,269.0,75,success,,2026-04-29 12:58:29
+39378,"National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract and ZIP Code Tabulation Area, United States, 2023",769,,,201,568,67.0,29,success,,2026-04-29 12:58:31
+38559,"National Neighborhood Data Archive (NaNDA): Internet Access by Census Tract and ZIP Code Tabulation Area, United States, 2015-2019",939,,,281,658,135.0,46,success,,2026-04-29 12:58:33
+38598,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract and ZIP Code Tabulation Area, United States, 1985-2023",2905,,,937,1968,229.0,63,success,,2026-04-29 12:58:35
+38579,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by Census Tract and ZIP Code Tabulation Area, United States, 2009-2010 and 2015-2016",1773,,,530,1243,89.0,34,success,,2026-04-29 12:58:36
+38586,"National Neighborhood Data Archive (NaNDA): Parks by Census Tract and ZIP Code Tabulation Area, United States, 2018 and 2022",5179,,,1686,3493,364.0,102,success,,2026-04-29 12:58:38
+38597,"National Neighborhood Data Archive (NaNDA): Polluting Sites by Census Tract and ZIP Code Tabulation Area, United States, 1987-2021",3738,,,1411,2327,193.0,70,success,,2026-04-29 12:58:40
+38585,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by Census Tract and ZIP Code Tabulation Area, United States, 2010 and 2020",1277,,,417,860,96.0,39,success,,2026-04-29 12:58:42
+38605,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by Census Tract and ZIP Code Tabulation Area, United States, 2016-2018 and 2024",2501,,,628,1873,200.0,67,success,,2026-04-29 12:58:44
+38569,"National Neighborhood Data Archive (NaNDA): School District Characteristics and School Counts by Census Tract, ZIP Code Tabulation Area, and School District, 2000-2018",2435,,,942,1493,134.0,51,success,,2026-04-29 12:58:46
+38528,"National Neighborhood Data Archive (NaNDA): Socioeconomic Status and Demographic Characteristics of Census Tracts and ZIP Code Tabulation Areas, United States, 1990-2022",20274,,,5571,14703,862.0,145,success,,2026-04-29 12:58:48
+38580,"National Neighborhood Data Archive (NaNDA): Street Connectivity by Census Tract and ZIP Code Tabulation Area, United States, 2010 and 2020",3901,,,1315,2586,155.0,52,success,,2026-04-29 12:58:50
+38584,"National Neighborhood Data Archive (NaNDA): Traffic Volume by Census Tract and ZIP Code Tabulation Area, United States, 1963-2019",1838,,,559,1279,227.0,58,success,,2026-04-29 12:58:52
+38606,"National Neighborhood Data Archive (NaNDA): Urbanicity by Census Tract, United States, 2010",725,,,240,485,156.0,60,success,,2026-04-29 12:58:54
+38506,"National Neighborhood Data Archive (NaNDA): Voter Registration, Turnout, and Partisanship by County, United States, 2004-2022",4688,,,1113,3575,826.0,200,success,,2026-04-29 12:58:55
+38858,"National Neighborhood Data Archive (NaNDA): Weather by County, United States, 2003-2016",22964,,,10447,12517,99.0,39,success,,2026-04-29 12:58:57
+110641,"National Neighborhood Data Archive (NaNDA): Street Connectivity by Census Tract, United States, 2010",95,983.0,5.0,0,0,,0,success,,2026-04-29 12:58:59
+110663,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract, United States, 2001-2016",385,3518.0,3.0,0,0,,0,success,,2026-04-29 12:59:02
+111107,"National Neighborhood Data Archive (NaNDA): Neighborhood Socioeconomic and Demographic Characteristics of Census Tracts, United States, 2000-2010",324,3923.0,5.0,0,0,,0,success,,2026-04-29 12:59:04
+111109,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by Census Tract, United States, 2016-2018",221,2405.0,5.0,0,0,,0,success,,2026-04-29 12:59:06
+115006,"National Neighborhood Data Archive (NaNDA): Crimes by County, United States, 2002-2014",289,3041.0,14.0,0,0,,0,success,,2026-04-29 12:59:08
+115323,"National Neighborhood Data Archive (NaNDA): Fast-Food Restaurants by Census Tract, United States, 2006-2015",9,2348.0,4.0,0,0,,0,success,,2026-04-29 12:59:10
+115404,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by Census Tract, United States, 2003-2017",340,2531.0,7.0,0,0,,0,success,,2026-04-29 12:59:12
+115407,"National Neighborhood Data Archive (NaNDA): Religious Organizations by Census Tract, United States, 2006-2015",4,361.0,5.0,0,0,,0,success,,2026-04-29 12:59:14
+115408,"National Neighborhood Data Archive (NaNDA): Civic and Social Organizations by Census Tract, United States, 2006-2015",9,541.0,4.0,0,0,,0,success,,2026-04-29 12:59:16
+115543,"National Neighborhood Data Archive (NaNDA):  Arts, Entertainment, and Recreation Organizations by Census Tract, United States, 2003-2017",299,2321.0,7.0,0,0,,0,success,,2026-04-29 12:59:18
+115967,"National Neighborhood Data Archive (NaNDA):  Religious, Civic, and Social Organizations by Census Tract, United States, 2003-2017",267,2157.0,7.0,0,0,,0,success,,2026-04-29 12:59:21
+115972,"National Neighborhood Data Archive (NaNDA):  Retail Establishments by Census Tract, United States, 2003-2017",205,1890.0,7.0,0,0,,0,success,,2026-04-29 12:59:23
+115973,"National Neighborhood Data Archive (NaNDA):  Law Enforcement Organizations by Census Tract, United States, 2003-2017",143,1472.0,7.0,0,0,,0,success,,2026-04-29 12:59:25
+115981,"National Neighborhood Data Archive (NaNDA):  Personal Care Services and Laundromats by Census Tract, United States, 2003-2017",137,1087.0,7.0,0,0,,0,success,,2026-04-29 12:59:28
+117163,"National Neighborhood Data Archive (NaNDA): Social Services by Census Tract, United States, 2003-2017",315,2273.0,8.0,0,0,,0,success,,2026-04-29 12:59:30
+117866,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability, Speed, and Adoption by Census Tract, United States, 2014-2020",228,2396.0,14.0,0,0,,0,success,,2026-04-29 12:59:32
+117921,"National Neighborhood Data Archive (NaNDA): Parks by Census Tract, United States, 2018",403,3674.0,3.0,0,0,,0,success,,2026-04-29 12:59:35
+119451,"National Neighborhood Data Archive (NaNDA):  Socioeconomic Status and Demographic Characteristics of Census Tracts, United States, 2008-2017",529,4559.0,5.0,0,0,,0,success,,2026-04-29 12:59:37
+119803,"National Neighborhood Data Archive (NaNDA): Parks by ZIP Code Tabulation Area, United States, 2018",163,2069.0,5.0,0,0,,0,success,,2026-04-29 12:59:39
+120088,,207,3768.0,2.0,0,0,,0,success,,2026-04-29 12:59:41
+120462,"National Neighborhood Data Archive (NaNDA): Socioeconomic Status and Demographic Characteristics of ZIP Code Tabulation Areas, United States, 2008-2017",533,17214.0,7.0,0,0,,0,success,,2026-04-29 12:59:43
+120463,"National Neighborhood Data Archive (NaNDA): Health Care Services by ZIP Code Tabulation Area, United States, 2003-2017",201,1918.0,10.0,0,0,,0,success,,2026-04-29 12:59:45
+120907,"National Neighborhood Data Archive (NaNDA): Health Care Services by Census Tract, United States, 2003-2017",484,3983.0,8.0,0,0,,0,success,,2026-04-29 12:59:48
+121741,"National Neighborhood Data Archive (NaNDA): Eating and Drinking Places by ZIP Code Tabulation Area, United States, 2003-2017",88,986.0,10.0,0,0,,0,success,,2026-04-29 12:59:50
+123001,"National Neighborhood Data Archive (NaNDA): Grocery Stores by Census Tract, United States, 2003-2017",371,2507.0,7.0,0,0,,0,success,,2026-04-29 12:59:53
+123042,"National Neighborhood Data Archive (NaNDA): Grocery Stores by ZIP Code Tabulation Area, United States, 2003-2017",134,2013.0,10.0,0,0,,0,success,,2026-04-29 12:59:55
+123541,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, and Convenience Stores by Census Tract, United States, 2003-2017",188,1371.0,7.0,0,0,,0,success,,2026-04-29 12:59:57
+123542,"National Neighborhood Data Archive (NaNDA): Liquor, Tobacco, and Convenience Stores by ZIP Code Tabulation Area, United States, 2003-2017",51,551.0,10.0,0,0,,0,success,,2026-04-29 13:00:00
+123801,"National Neighborhood Data Archive (NaNDA): Dollar Stores by ZIP Code Tabulation Area, United States, 2003-2017",48,647.0,10.0,0,0,,0,success,,2026-04-29 13:00:02
+123802,"National Neighborhood Data Archive (NaNDA): Dollar Stores by Census Tract, United States, 2003-2017",126,938.0,7.0,0,0,,0,success,,2026-04-29 13:00:05
+124721,"National Neighborhood Data Archive (NaNDA): Religious, Civic, and Social Organizations by ZIP Code Tabulation Area, United States, 2003-2017",115,1661.0,9.0,0,0,,0,success,,2026-04-29 13:00:07
+124801,"National Neighborhood Data Archive (NaNDA): Law Enforcement Organizations by ZIP Code Tabulation Area, United States, 2003-2017",41,445.0,10.0,0,0,,0,success,,2026-04-29 13:00:10
+125223,"National Neighborhood Data Archive (NaNDA): Arts, Entertainment, and Recreation Organizations by ZIP Code Tabulation Area, United States, 2003-2017",104,775.0,10.0,0,0,,0,success,,2026-04-29 13:00:12
+125781,"National Neighborhood Data Archive (NaNDA): Voter Registration, Turnout, and Partisanship by County, United States, 2004-2018",303,4370.0,18.0,0,0,,0,success,,2026-04-29 13:00:15
+126082,"National Neighborhood Data Archive (NaNDA): Social Services by ZIP Code Tabulation Area, United States, 2003-2017",85,730.0,10.0,0,0,,0,success,,2026-04-29 13:00:17
+127042,"National Neighborhood Data Archive (NaNDA): Retail Establishments by ZIP Code Tabulation Area, United States, 2003-2017",68,968.0,10.0,0,0,,0,success,,2026-04-29 13:00:20
+127262,"National Neighborhood Data Archive (NaNDA): Personal Care Services and Laundromats by ZIP Code Tabulation Area, United States, 2003-2017",34,406.0,10.0,0,0,,0,success,,2026-04-29 13:00:22
+127681,"National Neighborhood Data Archive (NaNDA):  Education and Training Services by Census Tract, United States, 2003-2017",158,1049.0,6.0,0,0,,0,success,,2026-04-29 13:00:24
+127682,"National Neighborhood Data Archive (NaNDA): Education and Training Services by ZIP Code Tabulation Area, United States, 2003-2017",27,430.0,9.0,0,0,,0,success,,2026-04-29 13:00:27
+128281,"National Neighborhood Data Archive (NaNDA):  Post Offices and Banks by Census Tract, United States, 2003-2017",115,874.0,7.0,0,0,,0,success,,2026-04-29 13:00:29
+128282,"National Neighborhood Data Archive (NaNDA): Post Offices and Banks by ZIP Code Tabulation Area, United States, 2003-2017",32,385.0,10.0,0,0,,0,success,,2026-04-29 13:00:32
+128841,"National Neighborhood Data Archive (NaNDA): Broadband Internet Availability and Speed by ZIP Code Tabulation Area, United States, 2014-2020",273,3676.0,12.0,0,0,,0,success,,2026-04-29 13:00:34
+128862,"National Neighborhood Data Archive (NaNDA): Land Cover by ZIP Code Tabulation Area, United States, 2001-2016",109,1754.0,5.0,0,0,,0,success,,2026-04-29 13:00:36
+130282,"National Neighborhood Data Archive (NaNDA): Public Transit Stops by ZIP Code Tabulation Area, United States, 2016-2018",110,1704.0,5.0,0,0,,0,success,,2026-04-29 13:00:39
+130542,"National Neighborhood Data Archive (NaNDA): Urbanicity by Census Tract, United States, 2010",102,1441.0,2.0,0,0,,0,success,,2026-04-29 13:00:41
+134561,"National Neighborhood Data Archive (NaNDA): Street Connectivity by ZIP Code Tabulation Area, United States, 2010",31,959.0,8.0,0,0,,0,success,,2026-04-29 13:00:43
+141121,,2813,26292.0,3.0,0,0,,0,success,,2026-04-29 13:00:45
+155022,"National Neighborhood Data Archive (NaNDA): Internet Access by Census Tract, United States, 2015-2019",62,422.0,2.0,0,0,,0,success,,2026-04-29 13:00:47
+155025,"National Neighborhood Data Archive (NaNDA): Internet Access by ZIP Code Tabulation Area, United States, 2015-2019",44,409.0,5.0,0,0,,0,success,,2026-04-29 13:00:49
+156024,"National Neighborhood Data Archive (NaNDA): School Counts by Census Tract, United States, 2000-2018",74,455.0,6.0,0,0,,0,success,,2026-04-29 13:00:51
+156041,"National Neighborhood Data Archive (NaNDA): School Counts by ZIP Code Tabulation Area, United States, 2000-2018",36,298.0,6.0,0,0,,0,success,,2026-04-29 13:00:53
+156042,"National Neighborhood Data Archive (NaNDA): School Counts and Characteristics by School District, United States, 2000-2018",61,567.0,42.0,0,0,,0,success,,2026-04-29 13:00:55
+156043,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by Census Tract, United States, 2009-2010 and 2015-2016",63,454.0,9.0,0,0,,0,success,,2026-04-29 13:00:59
+156045,"National Neighborhood Data Archive (NaNDA): Neighborhood-School Gap by ZIP Code Tabulation Area, United States, 2009-2010 and 2015-2016",24,505.0,9.0,0,0,,0,success,,2026-04-29 13:01:01
+159902,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by Census Tract, United States, 2010",56,710.0,5.0,0,0,,0,success,,2026-04-29 13:01:03
+159941,"National Neighborhood Data Archive (NaNDA): Primary and Secondary Roads by ZIP Code Tabulation Area, United States, 2010",18,870.0,3.0,0,0,,0,success,,2026-04-29 13:01:05
+159961,"National Neighborhood Data Archive (NaNDA): Polluting Sites by Census Tract, United States, 2000-2018",125,1012.0,5.0,0,0,,0,success,,2026-04-29 13:01:08
+159981,"National Neighborhood Data Archive (NaNDA): Polluting Sites by ZIP Code Tabulation Area, United States, 2000-2018",58,514.0,5.0,0,0,,0,success,,2026-04-29 13:01:10
+160261,"National Neighborhood Data Archive (NaNDA): Traffic Volume by ZIP Code Tabulation Area, United States, 1963-2019",186,2794.0,5.0,0,0,,0,success,,2026-04-29 13:01:12
+160262,"National Neighborhood Data Archive (NaNDA): Traffic Volume by Census Tract, United States, 1963-2019",197,1973.0,5.0,0,0,,0,success,,2026-04-29 13:01:14
+190141,National Neighborhood Data Archive (NaNDA): Special Data Release for Neighborhood Context and Alzheimer's Disease and Related Dementias,0,677.0,0.0,0,0,,0,success,,2026-04-29 13:01:17
+207966,,282,1119.0,9.0,0,0,,0,success,,2026-04-29 13:01:19
+208207,,276,1543.0,10.0,0,0,,0,success,,2026-04-29 13:01:20
+208366,"National Neighborhood Data Archive (NaNDA): Post Offices and Banks by Census Tract and ZCTA, United States, 1990-2021",78,388.0,6.0,0,0,,0,success,,2026-04-29 13:01:22
+208682,,182,1142.0,7.0,0,0,,0,success,,2026-04-29 13:01:25
+208684,,113,750.0,2.0,0,0,,0,success,,2026-04-29 13:01:26
+208751,,315,1108.0,11.0,0,0,,0,success,,2026-04-29 13:01:28
+208906,,95,343.0,2.0,0,0,,0,success,,2026-04-29 13:01:30
+208907,,228,1819.0,12.0,0,0,,0,success,,2026-04-29 13:01:31
+209050,,391,1885.0,11.0,0,0,,0,success,,2026-04-29 13:01:33
+209163,,204,993.0,8.0,0,0,,0,success,,2026-04-29 13:01:34
+209164,,200,805.0,7.0,0,0,,0,success,,2026-04-29 13:01:36
+209313,,386,1966.0,12.0,0,0,,0,success,,2026-04-29 13:01:37
+209324,,50,266.0,8.0,0,0,,0,success,,2026-04-29 13:01:39
+210581,"National Neighborhood Data Archive (NaNDA): Standardized Area Deprivation Index (ADI) by Census Block Group, United States, 2015, 2020 and 2022",127,7266.0,7.0,0,0,,0,success,,2026-04-29 13:01:41
+220701,"National Neighborhood Data Archive (NaNDA): Land Cover by Census Tract and ZIP Code Tabulation Area, United States, 1985- 2023",43,367.0,0.0,0,0,,0,success,,2026-04-29 13:01:43
+222263,"National Neighborhood Data Archive (NaNDA): Ophthalmologists by Census Tract and ZCTA, United States, 1990-2021",14,195.0,0.0,0,0,,0,success,,2026-04-29 13:01:45
+222901,"National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract and ZCTA, 2023",41,324.0,0.0,0,0,,0,success,,2026-04-29 13:01:47
+230941,"National Neighborhood Data Archive (NaNDA): PRISM Climate of Census Tracts, United States, 1981-2024",137,1201.0,3.0,0,0,,0,success,,2026-04-29 13:01:49
+237305,"National Neighborhood Data Archive: Air Conditioning Probability by Census Tract, United States, 2016",30,255.0,3.0,0,0,,0,success,,2026-04-29 13:01:51
+301419,,0,0.0,0.0,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E301419,2026-04-29 13:01:53
+302343,,0,0.0,0.0,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E302343,2026-04-29 13:01:54
+302937,,0,0.0,0.0,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E302937,2026-04-29 13:01:56
+302178,,0,0.0,0.0,0,0,,0,success,title fetch: 404 Client Error: Not Found for url: https://doi.org/10.3886/E302178,2026-04-29 13:01:57
