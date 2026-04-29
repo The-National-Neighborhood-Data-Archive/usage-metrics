@@ -24,6 +24,8 @@ back to the usage-statistics API for at least a total_downloads number.
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
 """
 
+import json
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -74,8 +76,19 @@ OPENICPSR_USAGE_URL = (
     "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{sid}/usage/view"
 )
 
+# DOI URL patterns for fetching dataset titles via JSON-LD.
+DOI_CURATED   = "https://doi.org/10.3886/ICPSR{sid}"
+DOI_OPENICPSR = "https://doi.org/10.3886/E{sid}"
+
+# Matches <script type="application/ld+json">...</script>
+JSONLD_RE = re.compile(
+    r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+    re.DOTALL | re.IGNORECASE,
+)
+
 CSV_COLUMNS = [
     "study_id",
+    "dataset_title",
     "total_downloads",
     "total_views",
     "publications",
@@ -103,6 +116,25 @@ def make_scraper() -> cloudscraper.CloudScraper:
         "Accept-Language": "en-US,en;q=0.9",
     })
     return scraper
+
+
+def fetch_title(study_id: int, scraper) -> str | None:
+    """
+    Fetch the dataset title via the DOI redirect, parsing the JSON-LD
+    <script type="application/ld+json"> block for the `name` field.
+    Returns None if anything fails or the field is missing.
+    """
+    url = (DOI_CURATED if study_id < 100000 else DOI_OPENICPSR).format(sid=study_id)
+    r = scraper.get(url, timeout=30, allow_redirects=True)
+    r.raise_for_status()
+    m = JSONLD_RE.search(r.text)
+    if not m:
+        return None
+    j = json.loads(m.group(1))
+    if isinstance(j, list):
+        j = next((x for x in j if isinstance(x, dict) and "name" in x), {})
+    name = j.get("name") if isinstance(j, dict) else None
+    return str(name).strip() if name else None
 
 
 def fetch_pcms(study_id: int, scraper) -> dict:
@@ -179,6 +211,7 @@ def scrape_study(study_id: int, scraper) -> dict:
     """Pull one study's metrics. Returns a dict matching CSV_COLUMNS."""
     row = {
         "study_id": study_id,
+        "dataset_title": None,
         "total_downloads": 0,
         "total_views": None,
         "publications": None,
@@ -192,6 +225,11 @@ def scrape_study(study_id: int, scraper) -> dict:
     }
 
     try:
+        try:
+            row["dataset_title"] = fetch_title(study_id, scraper)
+        except Exception as e:
+            row["error_message"] = f"title fetch: {str(e)[:120]}"
+
         pcms = fetch_pcms(study_id, scraper)
         if pcms["has_data"]:
             # Curated ICPSR — use PCMS numbers.
