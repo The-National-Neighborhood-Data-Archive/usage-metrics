@@ -2,7 +2,7 @@
 """
 Build a single-file static dashboard summarizing the latest NaNDA usage
 scrape. Reads the three artifacts produced by the scraper and writes a
-self-contained `dashboard/index.html` with inline CSS and Chart.js from
+self-contained `docs/index.html` with inline CSS and Chart.js from
 CDN.
 
 Inputs:
@@ -12,10 +12,11 @@ Inputs:
                                           before today's, for Δ computation)
 
 Output:
-  dashboard/index.html
+  docs/index.html
 
-Run after the scraper. Can be flipped to GitHub Pages later by enabling
-Pages on the `dashboard/` folder in repo settings; no code change needed.
+Lives in `docs/` because GitHub Pages only allows publishing from `/` or
+`/docs` — not arbitrary subfolders. To publish: Settings → Pages → branch
+main → folder /docs.
 """
 
 import html
@@ -27,7 +28,7 @@ from pathlib import Path
 import pandas as pd
 
 DATA_DIR = Path("data")
-OUTPUT_DIR = Path("dashboard")
+OUTPUT_DIR = Path("docs")
 LATEST_CSV  = DATA_DIR / "nanda_usage_stats_latest.csv"
 TIMESERIES_CSV = DATA_DIR / "nanda_usage_timeseries_latest.csv"
 DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")

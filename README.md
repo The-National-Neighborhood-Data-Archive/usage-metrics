@@ -88,12 +88,12 @@ Sections: headline totals + Δ%, top 5 absolute movers, top 5 % movers (baseline
 
 ### Dashboard
 
-`build_dashboard.py` writes a self-contained `dashboard/index.html` with:
+`build_dashboard.py` writes a self-contained `docs/index.html` with:
 - KPI cards (total downloads, dataset count, unique users)
 - Aggregate monthly downloads chart (Chart.js, curated only)
 - Sortable table of all 104 studies (click any column header)
 
-Open the file directly in a browser, or enable GitHub Pages on the `dashboard/` folder in repo settings to publish at `https://the-national-neighborhood-data-archive.github.io/usage-metrics/` — no code change required.
+Open the file directly in a browser, or publish via GitHub Pages: **Settings → Pages → Source: Deploy from a branch → Branch: main / folder: /docs**. (GitHub Pages only allows publishing from `/` or `/docs`, which is why the file lives in `docs/`.) Once enabled, the dashboard is live at `https://the-national-neighborhood-data-archive.github.io/usage-metrics/`.
 
 ## Limitations
 
