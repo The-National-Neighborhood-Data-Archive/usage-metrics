@@ -15,11 +15,16 @@ Two API sources, used together so we get coverage for both curated ICPSR
 
   2. PCMS openICPSR project-usage API:
        /pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project
-     - Returns total_downloads (and total_views, publications) for openICPSR
-       projects. All-time, no date params.
+     - Returns total_downloads and total_views for openICPSR projects.
+       All-time, no date params.
+
+  3. ICPSR search API (search.icpsr.umich.edu):
+     - Returns the count of related publications for curated ICPSR studies.
+     - Curated only — openICPSR projects don't have a comparable feed.
 
 Logic per study: try PCMS first; if it returns data, use it. Otherwise fall
-back to the usage-statistics API for at least a total_downloads number.
+back to the openICPSR usage endpoint for at least a total_downloads number.
+Curated rows additionally fetch a publications count from the search API.
 
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
 """
@@ -74,6 +79,13 @@ PCMS_INSTITUTION    = "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/instit
 # openICPSR usage view (the React component on the openICPSR project page hits this)
 OPENICPSR_USAGE_URL = (
     "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{sid}/usage/view"
+)
+
+# Publications search API — curated ICPSR only.
+# Returns Solr-style JSON with `response.numFound` = count of related publications.
+PUBLICATIONS_API = (
+    "https://search.icpsr.umich.edu/search/api/1.0/default/search/"
+    "applications/icpsr/modules/icpsr/publications"
 )
 
 # DOI URL patterns for fetching dataset titles via JSON-LD.
@@ -192,9 +204,7 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     """
     For openICPSR projects, hit the project-usage view endpoint that the
     React component on the page itself calls. Returns a dict with keys
-    total_downloads, total_views, publications (all int, 0 if missing).
-
-    Note: the API misspells the publications field as `reladtedPublication`.
+    total_downloads, total_views (both int, 0 if missing).
     """
     url = OPENICPSR_USAGE_URL.format(sid=study_id)
     r = scraper.get(url, params={"level": "project"}, timeout=30)
@@ -203,8 +213,22 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     return {
         "total_downloads": int(j.get("totalDownloads") or 0),
         "total_views":     int(j.get("totalViews") or 0),
-        "publications":    int(j.get("reladtedPublication") or 0),
     }
+
+
+def fetch_publications_count(study_id: int, scraper) -> int:
+    """
+    Count of related publications for curated ICPSR via the search API.
+    Reads `response.numFound` from a Solr-style JSON response.
+    """
+    params = {
+        "requestUrl": f"https://www.icpsr.umich.edu/web/ICPSR/studies/{study_id}/publications",
+        "isUserLoggedIn": "false",
+        "STUDYQ": study_id,
+    }
+    r = scraper.get(PUBLICATIONS_API, params=params, timeout=30)
+    r.raise_for_status()
+    return int(r.json().get("response", {}).get("numFound", 0))
 
 
 def scrape_study(study_id: int, scraper) -> dict:
@@ -238,13 +262,18 @@ def scrape_study(study_id: int, scraper) -> dict:
             row["total_downloads"] = pcms["total_downloads"]
             row["unique_users"] = pcms["unique_users"]
             row["num_institutions"] = pcms["num_institutions"]
+            # Publications count from the search API (curated only).
+            try:
+                row["publications"] = fetch_publications_count(study_id, scraper)
+            except Exception as e:
+                msg = f"pubs: {str(e)[:80]}"
+                row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
         else:
             # openICPSR — hit the openICPSR project-usage endpoint instead.
             try:
                 usage = fetch_openicpsr_usage(study_id, scraper)
                 row["total_downloads"] = usage["total_downloads"]
                 row["total_views"]     = usage["total_views"]
-                row["publications"]    = usage["publications"]
             except Exception as e:
                 # Don't fail the whole row if just the fallback breaks —
                 # record the issue but keep the (zero) PCMS values.

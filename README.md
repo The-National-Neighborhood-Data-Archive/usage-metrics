@@ -7,9 +7,18 @@ Automated monthly scraper that pulls download counts (and related stats) for eve
 `nanda_usage_scraper.py` calls the ICPSR PCMS APIs directly — no browser, no HTML parsing. It uses two endpoints depending on study type:
 
 - **Curated ICPSR studies** (5-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`. Returns the full breakdown: data vs. documentation downloads, unique users, and unique institutions.
-- **openICPSR projects** (6-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads, total views, and a related-publications count.
+- **openICPSR projects** (6-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads and total views.
+- **Publications search API** (curated only): `search.icpsr.umich.edu/search/api/1.0/default/search/applications/icpsr/modules/icpsr/publications?STUDYQ={id}`. Returns a Solr-style response; we read `response.numFound` for the count.
 
 `cloudscraper` is used because `pcms.icpsr.umich.edu` sits behind Cloudflare and plain `requests` gets challenged.
+
+## Date window — read before comparing to the PCMS page
+
+The scraper passes `startDt=01/01/2020, endDt=today` to PCMS — **lifetime since NaNDA's first ICPSR release**.
+
+The public PCMS utilization page at `pcms.icpsr.umich.edu/pcms/metrics/studies/{id}/utilization` defaults to **the last 3 years**. So our `total_downloads` will routinely run higher than the page's headline number — by exactly the count of pre-(today − 3 years) activity. That's expected, not a bug.
+
+To reconcile manually, set the page's Start Date to `01/01/2020` and End Date to today, then click **Go**. The page numbers will then match what the scraper records.
 
 ## Schedule
 
@@ -30,7 +39,7 @@ All files in `data/`:
 | `dataset_title` | Full dataset title (parsed from the JSON-LD `name` field on the DOI page) |
 | `total_downloads` | Total downloads (data + docs for curated; total downloads for openICPSR) |
 | `total_views` | Total project-page views (openICPSR only; blank for curated) |
-| `publications` | Count of related publications (openICPSR only; blank for curated) |
+| `publications` | Count of related publications (curated ICPSR only; blank for openICPSR) |
 | `data_downloads` | Data file downloads (curated only; blank for openICPSR) |
 | `documentation_downloads` | Documentation file downloads (curated only; blank for openICPSR) |
 | `unique_users` | Distinct users who downloaded (curated only) |
