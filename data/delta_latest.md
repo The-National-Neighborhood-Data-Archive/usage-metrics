@@ -1,38 +1,40 @@
-# NaNDA Usage Delta — 2026-04-29
-_Comparing against 2026-04-28 (nanda_usage_stats_2026-04-28.csv)._
+# NaNDA usage report — 2026-04-29
+_What changed since the last snapshot on 2026-04-28._
 
-## Headline
+## At a glance
 
-- **Total downloads (all studies):** 120,369 (was 120,151)
-- **Change:** +218 (+0.2%)
-- **Studies in current run:** 104 (1 new since 2026-04-28)
+- **Total downloads across all of NaNDA:** 120,369 (was 120,151)
+- **Net change:** +218 (+0.2%)
+- **Datasets in this report:** 104 (1 new since 2026-04-28)
 
-## Top 5 absolute movers (by Δ downloads)
+## Datasets with the most new downloads
 
-| Study | Title | Previous | Current | Δ |
+| ID | Dataset | Was | Now | Change |
 |---|---|---:|---:|---:|
-| 39093 | National Neighborhood Data Archive (NaNDA): Home Mortgage Disclosure… | 24,750 | 24,897 | +147 |
-| 38597 | National Neighborhood Data Archive (NaNDA): Polluting Sites by Census… | 3,714 | 3,738 | +24 |
-| 38586 | National Neighborhood Data Archive (NaNDA): Parks by Census Tract and… | 5,155 | 5,179 | +24 |
-| 38506 | National Neighborhood Data Archive (NaNDA): Voter Registration, Turno… | 4,676 | 4,688 | +12 |
-| 39378 | National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract… | 761 | 769 | +8 |
+| 39093 | Home Mortgage Disclosure Act Longitudinal Dataset by Census Tract, Un… | 24,750 | 24,897 | +147 |
+| 38597 | Polluting Sites by Census Tract and ZIP Code Tabulation Area, United… | 3,714 | 3,738 | +24 |
+| 38586 | Parks by Census Tract and ZIP Code Tabulation Area, United States, 20… | 5,155 | 5,179 | +24 |
+| 38506 | Voter Registration, Turnout, and Partisanship by County, United State… | 4,676 | 4,688 | +12 |
+| 39378 | Hospitals by Census Tract and ZIP Code Tabulation Area, United States… | 761 | 769 | +8 |
 
-## Top 5 % movers (baseline ≥ 50)
+## Datasets with the highest percentage of new downloads
+_Only counts datasets that had at least 50 downloads to start with — keeps the percentages meaningful._
 
-| Study | Title | Previous | Current | Δ % |
+| ID | Dataset | Was | Now | % change |
 |---|---|---:|---:|---:|
-| 39378 | National Neighborhood Data Archive (NaNDA): Hospitals by Census Tract… | 761 | 769 | +1.1% |
-| 210581 | National Neighborhood Data Archive (NaNDA): Standardized Area Depriva… | 126 | 127 | +0.8% |
-| 38597 | National Neighborhood Data Archive (NaNDA): Polluting Sites by Census… | 3,714 | 3,738 | +0.6% |
-| 39093 | National Neighborhood Data Archive (NaNDA): Home Mortgage Disclosure… | 24,750 | 24,897 | +0.6% |
-| 38586 | National Neighborhood Data Archive (NaNDA): Parks by Census Tract and… | 5,155 | 5,179 | +0.5% |
+| 39378 | Hospitals by Census Tract and ZIP Code Tabulation Area, United States… | 761 | 769 | +1.1% |
+| 210581 | Standardized Area Deprivation Index (ADI) by Census Block Group, Unit… | 126 | 127 | +0.8% |
+| 38597 | Polluting Sites by Census Tract and ZIP Code Tabulation Area, United… | 3,714 | 3,738 | +0.6% |
+| 39093 | Home Mortgage Disclosure Act Longitudinal Dataset by Census Tract, Un… | 24,750 | 24,897 | +0.6% |
+| 38586 | Parks by Census Tract and ZIP Code Tabulation Area, United States, 20… | 5,155 | 5,179 | +0.5% |
 
-## Anomalies (had downloads previously, zero now)
+## Possible scrape problems
+_These had downloads last time but show zero now — probably a glitch pulling data, worth a look._
 
 _None._
 
-## New studies since 2026-04-28
+## Datasets we started tracking since 2026-04-28
 
-| Study | Title | Total downloads |
+| ID | Dataset | Total downloads |
 |---|---|---:|
-| 200038 | National Neighborhood Data Archive (NaNDA): Libraries by Census Tract… | 0 |
+| 200038 | Libraries by Census Tract and ZIP Code Tabulation Area, United States… | 0 |
