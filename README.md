@@ -25,13 +25,15 @@ All under `data/` unless noted:
 |--------|-------------|
 | `study_id` | ICPSR or openICPSR study/project ID |
 | `dataset_title` | Full dataset title (joined from `inventory.csv` by `study_id`) |
+| `doi` | Dataset DOI (joined from `inventory.csv` by `study_id`) |
+| `url` | Landing-page URL (joined from `inventory.csv` by `study_id`) |
 | `total_downloads` | Total downloads (data + docs for curated; total downloads for openICPSR) |
 | `total_views` | Total project-page views (openICPSR only; blank for curated) |
 | `publications` | Count of related publications (curated ICPSR only; blank for openICPSR) |
 | `data_downloads` | Data file downloads (curated only; blank for openICPSR) |
 | `documentation_downloads` | Documentation file downloads (curated only; blank for openICPSR) |
-| `unique_users` | Distinct users who downloaded (curated only) |
-| `num_institutions` | Distinct institutions that downloaded (curated only) |
+| `unique_users` | Distinct users who downloaded (curated only; blank for openICPSR) |
+| `num_institutions` | Distinct institutions that downloaded (curated only; blank for openICPSR) |
 | `status` | `success` or `error` |
 | `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value) |
 | `timestamp` | When this row was scraped |
