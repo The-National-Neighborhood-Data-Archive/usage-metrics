@@ -72,7 +72,7 @@ def section_top_absolute(comp: pd.DataFrame) -> str:
     df = comp.sort_values("delta_abs", ascending=False).head(TOP_N)
     if df.empty:
         return "_No comparable studies._"
-    rows = ["| Study | Title | Previous | Current | Δ |",
+    rows = ["| ID | Dataset | Was | Now | Change |",
             "|---|---|---:|---:|---:|"]
     for _, r in df.iterrows():
         rows.append(f"| {int(r['study_id'])} | {truncate(r['dataset_title'])} | "
@@ -86,7 +86,7 @@ def section_top_pct(comp: pd.DataFrame) -> str:
     df = eligible.sort_values("delta_pct", ascending=False).head(TOP_N)
     if df.empty:
         return f"_No studies with previous downloads ≥ {PCT_BASELINE_MIN}._"
-    rows = ["| Study | Title | Previous | Current | Δ % |",
+    rows = ["| ID | Dataset | Was | Now | % change |",
             "|---|---|---:|---:|---:|"]
     for _, r in df.iterrows():
         rows.append(f"| {int(r['study_id'])} | {truncate(r['dataset_title'])} | "
@@ -99,7 +99,7 @@ def section_anomalies(comp: pd.DataFrame) -> str:
     anomaly = comp[(comp["total_downloads_prev"] > 0) & (comp["total_downloads"] == 0)]
     if anomaly.empty:
         return "_None._"
-    rows = ["| Study | Title | Previous | Current |",
+    rows = ["| ID | Dataset | Was | Now |",
             "|---|---|---:|---:|"]
     for _, r in anomaly.sort_values("total_downloads_prev", ascending=False).iterrows():
         rows.append(f"| {int(r['study_id'])} | {truncate(r['dataset_title'])} | "
@@ -110,7 +110,7 @@ def section_anomalies(comp: pd.DataFrame) -> str:
 def section_new_studies(new_df: pd.DataFrame) -> str:
     if new_df.empty:
         return "_None._"
-    rows = ["| Study | Title | Total downloads |",
+    rows = ["| ID | Dataset | Total downloads |",
             "|---|---|---:|"]
     for _, r in new_df.sort_values("total_downloads", ascending=False).iterrows():
         rows.append(f"| {int(r['study_id'])} | {truncate(r['dataset_title'])} | "
@@ -171,28 +171,30 @@ def main() -> None:
     total_pct = (total_delta / total_prev * 100) if total_prev else None
 
     parts = [
-        f"# NaNDA Usage Delta — {today}",
-        f"_Comparing against {prev_date} ({prev_path.name})._",
+        f"# NaNDA usage report — {today}",
+        f"_What changed since the last snapshot on {prev_date}._",
         "",
-        "## Headline",
+        "## At a glance",
         "",
-        f"- **Total downloads (all studies):** {total_curr:,} (was {total_prev:,})",
-        f"- **Change:** {fmt_signed(total_delta)} ({fmt_pct(total_pct)})",
-        f"- **Studies in current run:** {len(current)} ({len(new_df)} new since {prev_date})",
+        f"- **Total downloads across all of NaNDA:** {total_curr:,} (was {total_prev:,})",
+        f"- **Net change:** {fmt_signed(total_delta)} ({fmt_pct(total_pct)})",
+        f"- **Datasets in this report:** {len(current)} ({len(new_df)} new since {prev_date})",
         "",
-        f"## Top {TOP_N} absolute movers (by Δ downloads)",
+        "## Datasets with the most new downloads",
         "",
         section_top_absolute(comp),
         "",
-        f"## Top {TOP_N} % movers (baseline ≥ {PCT_BASELINE_MIN})",
+        "## Datasets with the highest percentage of new downloads",
+        f"_Only counts datasets that had at least {PCT_BASELINE_MIN} downloads to start with — keeps the percentages meaningful._",
         "",
         section_top_pct(comp),
         "",
-        "## Anomalies (had downloads previously, zero now)",
+        "## Possible scrape problems",
+        "_These had downloads last time but show zero now — probably a glitch pulling data, worth a look._",
         "",
         section_anomalies(comp),
         "",
-        f"## New studies since {prev_date}",
+        f"## Datasets we started tracking since {prev_date}",
         "",
         section_new_studies(new_df),
         "",

@@ -4,13 +4,21 @@ Automated monthly scraper that pulls download counts (and related stats) for eve
 
 ## How it works
 
-`nanda_usage_scraper.py` calls the ICPSR PCMS APIs directly — no browser, no HTML parsing. It uses two endpoints depending on study type:
+`nanda_usage_scraper.py` calls the ICPSR PCMS APIs directly — no browser, no HTML parsing. Routing is driven by `inventory.csv`'s `archive` column (not by ID length, which is unreliable for newer deposit pathways):
 
-- **Curated ICPSR studies** (5-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`. Returns the full breakdown: data vs. documentation downloads, unique users, and unique institutions.
-- **openICPSR projects** (6-digit IDs): `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads and total views.
+- **`archive=ICPSR`** (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`. Returns the full breakdown: data vs. documentation downloads, unique users, and unique institutions.
+- **`archive=openICPSR`**: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`. Returns total downloads and total views.
 - **Publications search API** (curated only): `search.icpsr.umich.edu/search/api/1.0/default/search/applications/icpsr/modules/icpsr/publications?STUDYQ={id}`. Returns a Solr-style response; we read `response.numFound` for the count.
 
-`cloudscraper` is used because `pcms.icpsr.umich.edu` sits behind Cloudflare and plain `requests` gets challenged.
+Dataset titles are read from `inventory.csv` (no live fetch). `cloudscraper` is used because `pcms.icpsr.umich.edu` sits behind Cloudflare and plain `requests` gets challenged.
+
+## Inventory dependency
+
+The scraper reads `inventory.csv` at startup for two things:
+1. **Dataset title** — joined onto each row by `study_id`.
+2. **Archive routing** — `archive=ICPSR` → PCMS endpoints; `archive=openICPSR` → openICPSR usage endpoint.
+
+When a new dataset joins NaNDA, append its row to `inventory.csv` — that's the only file to edit. The scraper derives the list of studies to scrape from the inventory's `study_id` column at runtime.
 
 ## Date window — read before comparing to the PCMS page
 
@@ -36,7 +44,7 @@ All files in `data/`:
 | Column | Description |
 |--------|-------------|
 | `study_id` | ICPSR or openICPSR study/project ID |
-| `dataset_title` | Full dataset title (parsed from the JSON-LD `name` field on the DOI page) |
+| `dataset_title` | Full dataset title (joined from `inventory.csv` by `study_id`) |
 | `total_downloads` | Total downloads (data + docs for curated; total downloads for openICPSR) |
 | `total_views` | Total project-page views (openICPSR only; blank for curated) |
 | `publications` | Count of related publications (curated ICPSR only; blank for openICPSR) |
@@ -45,7 +53,7 @@ All files in `data/`:
 | `unique_users` | Distinct users who downloaded (curated only) |
 | `num_institutions` | Distinct institutions that downloaded (curated only) |
 | `status` | `success` or `error` |
-| `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., title 404) |
+| `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value) |
 | `timestamp` | When this row was scraped |
 
 ### Time-series CSV (curated only)
@@ -83,7 +91,7 @@ Sections: headline totals + Δ%, top 5 absolute movers, top 5 % movers (baseline
 `build_dashboard.py` writes a self-contained `dashboard/index.html` with:
 - KPI cards (total downloads, dataset count, unique users)
 - Aggregate monthly downloads chart (Chart.js, curated only)
-- Sortable table of all 103 studies (click any column header)
+- Sortable table of all 104 studies (click any column header)
 
 Open the file directly in a browser, or enable GitHub Pages on the `dashboard/` folder in repo settings to publish at `https://the-national-neighborhood-data-archive.github.io/usage-metrics/` — no code change required.
 
@@ -91,12 +99,13 @@ Open the file directly in a browser, or enable GitHub Pages on the `dashboard/` 
 
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
 - **openICPSR has no documentation/data split.** The openICPSR usage endpoint returns one `totalDownloads` figure with no breakdown.
-- **Some openICPSR studies have no DOI.** Brand-new studies that haven't been registered with DOI return 404 on the title fetch; `dataset_title` is left blank and the 404 is logged in `error_message`.
 - **No geographic breakdown.** PCMS does not expose a country/region/state download breakdown for studies. Verified by probing every plausible endpoint and inspecting the dashboard JS bundles; no such widget exists in the public utilization page.
+- **RDE-deposited datasets return zero usage.** Studies with `deposit_via=RDE` in the inventory (currently 5 rows: 200038, 301419, 302178, 302343, 302937) live in openICPSR but consistently return zero downloads/views from the openICPSR endpoint. Cause unconfirmed — could be too new, or RDE deposits may not yet feed the same metrics pipeline. Future probing target.
 
 ## Adding a new study
 
-Append the ID to the `STUDY_IDS` list at the top of `nanda_usage_scraper.py`, commit, push. The next monthly run picks it up automatically.
+1. Append a row to `inventory.csv` with `study_id`, `archive`, `status`, `title`, etc.
+2. Commit, push. The next monthly run picks it up — `STUDY_IDS` is derived from the inventory at runtime.
 
 ## Running locally
 

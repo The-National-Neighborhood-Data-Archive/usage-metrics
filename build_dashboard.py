@@ -131,7 +131,7 @@ def main() -> None:
         f"<small>{fmt_signed(delta_total)} since {prev_date}</small>"
         if prev_date is not None else ""
     )
-    delta_th = f"Δ since {prev_date}" if prev_date else "Δ"
+    delta_th = f"Change since {prev_date}" if prev_date else "Change"
 
     # Build table tbody server-side; client JS just handles sort
     tbody_rows = []
