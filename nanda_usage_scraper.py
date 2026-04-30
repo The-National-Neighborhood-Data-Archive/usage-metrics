@@ -77,6 +77,8 @@ PUBLICATIONS_API = (
 CSV_COLUMNS = [
     "study_id",
     "dataset_title",
+    "doi",
+    "url",
     "total_downloads",
     "total_views",
     "publications",
@@ -239,13 +241,15 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
     row = {
         "study_id": study_id,
         "dataset_title": None,
+        "doi": None,
+        "url": None,
         "total_downloads": 0,
         "total_views": None,
         "publications": None,
-        "data_downloads": 0,
-        "documentation_downloads": 0,
+        "data_downloads": None,
+        "documentation_downloads": None,
         "unique_users": None,
-        "num_institutions": 0,
+        "num_institutions": None,
         "status": "success",
         "error_message": "",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -254,6 +258,8 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
     try:
         inv_entry = inventory.get(study_id, {})
         row["dataset_title"] = inv_entry.get("title")
+        row["doi"] = inv_entry.get("doi")
+        row["url"] = inv_entry.get("url")
         archive = inv_entry.get("archive")
 
         if archive == "openICPSR":
