@@ -117,10 +117,13 @@ def main() -> None:
         title = r.get("dataset_title")
         title_str = "" if pd.isna(title) else str(title)
         title_short = title_str if len(title_str) <= 90 else title_str[:89].rstrip() + "…"
+        doi = r.get("doi")
+        doi_str = "" if pd.isna(doi) else str(doi)
         table_rows.append({
             "study_id":   int(r["study_id"]),
             "title":      title_str,
             "title_short": title_short,
+            "doi":        doi_str,
             "total":      int(r["total_downloads"]) if pd.notna(r["total_downloads"]) else 0,
             "delta":      None if pd.isna(r["delta"]) else int(r["delta"]),
             "users":      None if pd.isna(r["unique_users"]) else int(r["unique_users"]),
@@ -144,10 +147,16 @@ def main() -> None:
             elif row["delta"] < 0: delta_class = "delta-neg"
         users_cell = "" if row["users"] is None else f"{row['users']:,}"
         pubs_cell  = "" if row["pubs"]  is None else f"{row['pubs']:,}"
+        title_safe = html.escape(row["title_short"])
+        if row["doi"]:
+            href = "https://doi.org/" + row["doi"]
+            title_cell = f'<a href="{html.escape(href)}" target="_blank" rel="noopener noreferrer">{title_safe}</a>'
+        else:
+            title_cell = title_safe
         tbody_rows.append(
             f"<tr>"
             f"<td>{row['study_id']}</td>"
-            f"<td title=\"{html.escape(row['title'])}\">{html.escape(row['title_short'])}</td>"
+            f"<td title=\"{html.escape(row['title'])}\">{title_cell}</td>"
             f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
             f"<td class=\"num {delta_class}\" data-sort=\"{row['delta'] if row['delta'] is not None else ''}\">{delta_cell}</td>"
             f"<td class=\"num\" data-sort=\"{row['users'] if row['users'] is not None else ''}\">{users_cell}</td>"
