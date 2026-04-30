@@ -15,11 +15,16 @@ Two API sources, used together so we get coverage for both curated ICPSR
 
   2. PCMS openICPSR project-usage API:
        /pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project
-     - Returns total_downloads (and total_views, publications) for openICPSR
-       projects. All-time, no date params.
+     - Returns total_downloads and total_views for openICPSR projects.
+       All-time, no date params.
+
+  3. ICPSR search API (search.icpsr.umich.edu):
+     - Returns the count of related publications for curated ICPSR studies.
+     - Curated only — openICPSR projects don't have a comparable feed.
 
 Logic per study: try PCMS first; if it returns data, use it. Otherwise fall
-back to the usage-statistics API for at least a total_downloads number.
+back to the openICPSR usage endpoint for at least a total_downloads number.
+Curated rows additionally fetch a publications count from the search API.
 
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
 """
@@ -76,6 +81,13 @@ OPENICPSR_USAGE_URL = (
     "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{sid}/usage/view"
 )
 
+# Publications search API — curated ICPSR only.
+# Returns Solr-style JSON with `response.numFound` = count of related publications.
+PUBLICATIONS_API = (
+    "https://search.icpsr.umich.edu/search/api/1.0/default/search/"
+    "applications/icpsr/modules/icpsr/publications"
+)
+
 # DOI URL patterns for fetching dataset titles via JSON-LD.
 DOI_CURATED   = "https://doi.org/10.3886/ICPSR{sid}"
 DOI_OPENICPSR = "https://doi.org/10.3886/E{sid}"
@@ -98,6 +110,16 @@ CSV_COLUMNS = [
     "num_institutions",
     "status",
     "error_message",
+    "timestamp",
+]
+
+TIMESERIES_COLUMNS = [
+    "study_id",
+    "year",
+    "month",
+    "data_downloads",
+    "documentation_downloads",
+    "total_downloads",
     "timestamp",
 ]
 
@@ -192,9 +214,7 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     """
     For openICPSR projects, hit the project-usage view endpoint that the
     React component on the page itself calls. Returns a dict with keys
-    total_downloads, total_views, publications (all int, 0 if missing).
-
-    Note: the API misspells the publications field as `reladtedPublication`.
+    total_downloads, total_views (both int, 0 if missing).
     """
     url = OPENICPSR_USAGE_URL.format(sid=study_id)
     r = scraper.get(url, params={"level": "project"}, timeout=30)
@@ -203,8 +223,22 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     return {
         "total_downloads": int(j.get("totalDownloads") or 0),
         "total_views":     int(j.get("totalViews") or 0),
-        "publications":    int(j.get("reladtedPublication") or 0),
     }
+
+
+def fetch_publications_count(study_id: int, scraper) -> int:
+    """
+    Count of related publications for curated ICPSR via the search API.
+    Reads `response.numFound` from a Solr-style JSON response.
+    """
+    params = {
+        "requestUrl": f"https://www.icpsr.umich.edu/web/ICPSR/studies/{study_id}/publications",
+        "isUserLoggedIn": "false",
+        "STUDYQ": study_id,
+    }
+    r = scraper.get(PUBLICATIONS_API, params=params, timeout=30)
+    r.raise_for_status()
+    return int(r.json().get("response", {}).get("numFound", 0))
 
 
 def scrape_study(study_id: int, scraper) -> dict:
@@ -238,13 +272,18 @@ def scrape_study(study_id: int, scraper) -> dict:
             row["total_downloads"] = pcms["total_downloads"]
             row["unique_users"] = pcms["unique_users"]
             row["num_institutions"] = pcms["num_institutions"]
+            # Publications count from the search API (curated only).
+            try:
+                row["publications"] = fetch_publications_count(study_id, scraper)
+            except Exception as e:
+                msg = f"pubs: {str(e)[:80]}"
+                row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
         else:
             # openICPSR — hit the openICPSR project-usage endpoint instead.
             try:
                 usage = fetch_openicpsr_usage(study_id, scraper)
                 row["total_downloads"] = usage["total_downloads"]
                 row["total_views"]     = usage["total_views"]
-                row["publications"]    = usage["publications"]
             except Exception as e:
                 # Don't fail the whole row if just the fallback breaks —
                 # record the issue but keep the (zero) PCMS values.
@@ -278,6 +317,76 @@ def scrape_all(study_ids, scraper, delay=REQUEST_DELAY) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=CSV_COLUMNS)
 
 
+def fetch_timeseries(study_id: int, scraper) -> list:
+    """
+    Pull the monthly download time-series for a curated ICPSR study.
+    PCMS /downloadCount returns one item per (year, month, type) bucket.
+    Returns the raw items list (each dict has month, year, downloads, type).
+    """
+    params = {"studyId": study_id, "startDt": START_DATE, "endDt": END_DATE}
+    referer = f"https://pcms.icpsr.umich.edu/pcms/metrics/studies/{study_id}/utilization"
+    r = scraper.get(PCMS_DOWNLOAD_COUNT, params=params,
+                    headers={"Referer": referer}, timeout=30)
+    r.raise_for_status()
+    return r.json() or []
+
+
+def scrape_timeseries(study_ids, scraper, delay=REQUEST_DELAY) -> pd.DataFrame:
+    """
+    Build a long-format monthly time-series for all curated ICPSR studies
+    in `study_ids`. openICPSR (6-digit) IDs are skipped — no time-series
+    endpoint exists for them.
+
+    One row per (study_id, year, month) with separate columns for data
+    and documentation downloads. Months with zero activity are omitted.
+    """
+    curated = [sid for sid in study_ids if sid < 100000]
+    n = len(curated)
+    print(f"\nFetching monthly time-series for {n} curated studies")
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    long_rows = []
+    for i, sid in enumerate(curated, 1):
+        try:
+            items = fetch_timeseries(sid, scraper)
+            for item in items:
+                long_rows.append({
+                    "study_id": sid,
+                    "year":  int(item["year"]),
+                    "month": int(item["month"]),
+                    "type":  item.get("type"),
+                    "downloads": int(item.get("downloads") or 0),
+                })
+            print(f"  [{i:>3}/{n}] {sid:<7} ok   {len(items)} buckets")
+        except Exception as e:
+            print(f"  [{i:>3}/{n}] {sid:<7} ERR  {str(e)[:80]}")
+        if i < n:
+            time.sleep(delay)
+
+    if not long_rows:
+        return pd.DataFrame(columns=TIMESERIES_COLUMNS)
+
+    long_df = pd.DataFrame(long_rows)
+    wide = (long_df
+            .pivot_table(index=["study_id", "year", "month"],
+                         columns="type", values="downloads",
+                         aggfunc="sum", fill_value=0)
+            .reset_index())
+    wide.columns.name = None
+    # Ensure both type columns exist even if one type never appeared.
+    for col in ("data", "documentation"):
+        if col not in wide.columns:
+            wide[col] = 0
+    wide = wide.rename(columns={
+        "data": "data_downloads",
+        "documentation": "documentation_downloads",
+    })
+    wide["total_downloads"] = wide["data_downloads"] + wide["documentation_downloads"]
+    wide["timestamp"] = timestamp
+    wide = wide.sort_values(["study_id", "year", "month"]).reset_index(drop=True)
+    return wide[TIMESERIES_COLUMNS]
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -303,6 +412,19 @@ def main() -> None:
     print(f"Wrote {dated_path}")
     print(f"Wrote {latest_path}")
     print(f"  {n_ok} success / {n_err} errors / {n_real} with non-zero downloads")
+
+    # Monthly time-series (curated ICPSR only)
+    ts_df = scrape_timeseries(STUDY_IDS, scraper)
+    ts_dated  = OUTPUT_DIR / f"nanda_usage_timeseries_{today}.csv"
+    ts_latest = OUTPUT_DIR / "nanda_usage_timeseries_latest.csv"
+    ts_df.to_csv(ts_dated, index=False)
+    ts_df.to_csv(ts_latest, index=False)
+
+    print()
+    print(f"Wrote {ts_dated}")
+    print(f"Wrote {ts_latest}")
+    print(f"  {len(ts_df):,} monthly rows across "
+          f"{ts_df['study_id'].nunique() if len(ts_df) else 0} curated studies")
 
 
 if __name__ == "__main__":
