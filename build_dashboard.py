@@ -287,6 +287,10 @@ def main() -> None:
         "breakdown, unique-user count, or publication tracking."
     )
 
+    delta_header_label = (
+        f"Change since {prev_date_human}" if prev_date_human else "Change"
+    )
+
     methodology_text = (
         "Numbers are aggregated lifetime totals since January 1, 2020, pulled monthly from "
         "ICPSR's PCMS APIs (curated datasets) and the openICPSR usage endpoint (self-published datasets). "
@@ -717,7 +721,7 @@ footer p {{ margin: 0; }}
       <tr>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change this month</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="users" data-type="num">Unique users</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="pubs" data-type="num">Publications</button></th>
       </tr>
@@ -752,7 +756,7 @@ footer p {{ margin: 0; }}
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change this month</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
       </tr>
     </thead>
     <tbody>
