@@ -27,6 +27,7 @@ API sources:
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
 """
 
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -100,6 +101,17 @@ TIMESERIES_COLUMNS = [
     "total_downloads",
     "timestamp",
 ]
+
+# DataCite only mints DOIs at major-version granularity. Inventory may store
+# minor-version-stripped DOIs (e.g. V2.5 → V25), which 404. Drop the version
+# suffix entirely so doi.org redirects to the current version.
+_DOI_VERSION_RE = re.compile(r'(?:\.[Vv]\d+|V\d+)$')
+
+
+def strip_doi_version(doi):
+    if not doi or not isinstance(doi, str):
+        return doi
+    return _DOI_VERSION_RE.sub('', doi)
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +270,7 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
     try:
         inv_entry = inventory.get(study_id, {})
         row["dataset_title"] = inv_entry.get("title")
-        row["doi"] = inv_entry.get("doi")
+        row["doi"] = strip_doi_version(inv_entry.get("doi"))
         row["url"] = inv_entry.get("url")
         archive = inv_entry.get("archive")
 
