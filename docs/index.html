@@ -17,11 +17,11 @@
   /* Semantic aliases */
   --bg: var(--nanda-white);
   --surface: var(--nanda-white);
-  --text: #1a1a1a;
+  --text: #1a2c5b;
   --muted: #555555;
   --accent: var(--nanda-blue-light);
   --border: #d0d7de;
-  --pos: #166534;
+  --pos: #16a34a;
   --neg: #b42318;
   --row-hover: #eaf4fb;
   --focus: #ff8a00;
@@ -69,6 +69,29 @@ header {
   gap: 1.75rem;
   margin-bottom: 2rem;
 }
+.header-logo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.header-logo a {
+  display: inline-block;
+  text-decoration: none;
+  max-width: 100%;
+}
+.header-logo .logo {
+  height: 140px;
+  width: auto;
+  max-width: 100%;
+  display: block;
+}
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
 .header-title h1 {
   margin: 0;
   font-size: clamp(1.4rem, 2.5vw, 1.8rem);
@@ -80,18 +103,6 @@ header {
   color: var(--muted);
   font-size: 0.95rem;
   max-width: 65ch;
-}
-.header-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
-}
-.header-meta .logo {
-  height: 44px;
-  width: auto;
-  display: block;
 }
 .updated { margin: 0; color: var(--muted); font-size: 0.9rem; }
 .updated time { font-weight: 700; color: var(--text); }
@@ -314,7 +325,8 @@ footer p { margin: 0; }
 
 @media (max-width: 600px) {
   header { gap: 1.25rem; }
-  .header-meta { gap: 0.5rem 1rem; }
+  .header-logo .logo { height: 80px; }
+  .header-row { gap: 0.5rem 1rem; }
   .kpi { padding: 1rem 1.1rem; }
   .kpi-value { font-size: 1.6rem; }
   section { padding: 1.1rem; }
@@ -328,12 +340,16 @@ footer p { margin: 0; }
 <a class="skip-link" href="#main">Skip to main content</a>
 <div class="page">
 <header>
-  <div class="header-title">
-    <h1>NaNDA Usage Dashboard</h1>
-    <p class="tagline">The National Neighborhood Data Archive — monthly usage of our datasets on ICPSR and openICPSR.</p>
+  <div class="header-logo">
+    <a href="https://nanda.isr.umich.edu/" target="_blank" rel="noopener noreferrer">
+      <img src="assets/nanda-logo.svg" alt="NaNDA — National Neighborhood Data Archive" class="logo" width="812" height="140">
+    </a>
   </div>
-  <div class="header-meta">
-    <img src="assets/nanda-logo.svg" alt="National Neighborhood Data Archive logo" class="logo" width="220" height="38">
+  <div class="header-row">
+    <div class="header-title">
+      <h1>NaNDA Usage Dashboard</h1>
+      <p class="tagline">The National Neighborhood Data Archive — monthly usage of our datasets on ICPSR and openICPSR.</p>
+    </div>
     <p class="updated">Last updated <time datetime="2026-05-01">May 1, 2026</time></p>
   </div>
 </header>
@@ -650,12 +666,12 @@ new Chart(document.getElementById("ts-chart"), {
     scales: {
       y: {
         beginAtZero: true,
-        ticks: { callback: v => v.toLocaleString(), color: "#1a1a1a" },
-        title: { display: true, text: "Downloads per month", color: "#1a1a1a", font: { size: 13, weight: "700" } },
+        ticks: { callback: v => v.toLocaleString(), color: "#1a2c5b" },
+        title: { display: true, text: "Downloads per month", color: "#1a2c5b", font: { size: 13, weight: "700" } },
         grid: { color: "rgba(26, 26, 26, 0.08)" },
       },
       x: {
-        ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 16, color: "#1a1a1a" },
+        ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 16, color: "#1a2c5b" },
         grid: { color: "rgba(26, 26, 26, 0.08)" },
       },
     },
