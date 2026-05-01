@@ -231,8 +231,7 @@ def main() -> None:
         out = []
         for row in curated_rows:
             out.append(
-                "<tr>"
-                f"<td class=\"num\">{row['study_id']}</td>"
+                f"<tr data-study-id=\"{row['study_id']}\">"
                 f"<td class=\"title-cell\">{title_link(row)}</td>"
                 f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
                 f"{delta_cell(row)}"
@@ -246,8 +245,7 @@ def main() -> None:
         out = []
         for row in self_rows:
             out.append(
-                "<tr>"
-                f"<td class=\"num\">{row['study_id']}</td>"
+                f"<tr data-study-id=\"{row['study_id']}\">"
                 f"<td class=\"title-cell\">{title_link(row)}</td>"
                 f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
                 f"{num_cell(row['views'])}"
@@ -307,25 +305,32 @@ def main() -> None:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(page_title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root {{
-  --bg: #f4f6f8;
-  --surface: #ffffff;
-  --text: #1a1a1a;
+  /* NaNDA brand */
+  --nanda-blue-dark: #01528a;
+  --nanda-blue-light: #1499d6;
+  --nanda-white: #ffffff;
+  /* Semantic aliases */
+  --bg: var(--nanda-white);
+  --surface: var(--nanda-white);
+  --text: var(--nanda-blue-dark);
   --muted: #555555;
+  --accent: var(--nanda-blue-light);
   --border: #d0d7de;
-  --brand: #01528a;
-  --brand-deep: #013d68;
   --pos: #1a7f37;
   --neg: #b42318;
-  --row-hover: #f0f4f8;
+  --row-hover: #eaf4fb;
   --focus: #ff8a00;
 }}
 * {{ box-sizing: border-box; }}
 html {{ scroll-behavior: smooth; overflow-x: hidden; }}
 body {{
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   margin: 0;
   background: var(--bg);
   color: var(--text);
@@ -342,7 +347,7 @@ body {{
 }}
 .skip-link:focus {{
   position: static; width: auto; height: auto; padding: 0.5rem 1rem;
-  background: var(--brand); color: #fff; text-decoration: none; display: inline-block;
+  background: var(--nanda-blue-dark); color: #fff; text-decoration: none; display: inline-block;
   margin: 0.5rem 0;
 }}
 .visually-hidden {{
@@ -351,8 +356,8 @@ body {{
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }}
 
-a {{ color: var(--brand); }}
-a:hover {{ color: var(--brand-deep); }}
+a {{ color: var(--nanda-blue-dark); text-decoration: underline; text-underline-offset: 2px; }}
+a:hover {{ color: var(--nanda-blue-dark); text-decoration-thickness: 2px; }}
 a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {{
   outline: 3px solid var(--focus);
   outline-offset: 2px;
@@ -378,33 +383,34 @@ header {{
   width: auto;
   display: block;
 }}
-.brand h1 {{ margin: 0; font-size: clamp(1.4rem, 2.5vw, 1.8rem); line-height: 1.2; }}
+.brand h1 {{ margin: 0; font-size: clamp(1.4rem, 2.5vw, 1.8rem); line-height: 1.2; color: var(--nanda-blue-dark); }}
 .tagline {{ margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; max-width: 60ch; }}
 .updated {{ margin: 0; color: var(--muted); font-size: 0.9rem; }}
-.updated time {{ font-weight: 600; color: var(--text); }}
+.updated time {{ font-weight: 700; color: var(--nanda-blue-dark); }}
 
 section {{
   background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }}
 section h2 {{
   margin: 0 0 1rem;
   font-size: 1.15rem;
-  color: var(--text);
+  color: var(--nanda-blue-dark);
+  font-weight: 700;
 }}
 section .definition {{
   margin: 0 0 1.25rem;
   padding: 0.85rem 1rem;
-  background: #eef4fa;
-  border-left: 4px solid var(--brand);
+  background: #eaf4fb;
+  border-left: 4px solid var(--nanda-blue-dark);
   border-radius: 4px;
   font-size: 0.92rem;
   color: var(--text);
 }}
-.definition strong {{ color: var(--brand-deep); }}
+.definition strong {{ color: var(--nanda-blue-dark); font-weight: 700; }}
 
 /* KPI cards */
 .kpis {{
@@ -418,22 +424,22 @@ section .definition {{
 }}
 .kpi {{
   background: var(--surface);
+  border: 1px solid var(--border);
   padding: 1.25rem 1.5rem;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }}
 .kpi dl {{ margin: 0; }}
 .kpi dt {{
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 700;
 }}
 .kpi-value {{
   margin: 0.35rem 0 0;
   font-size: 2rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--nanda-blue-dark);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }}
@@ -464,8 +470,9 @@ section .definition {{
   margin-bottom: 0.75rem;
 }}
 .filter-row label {{
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--nanda-blue-dark);
 }}
 .filter-row input[type="search"] {{
   flex: 1 1 220px;
@@ -478,7 +485,7 @@ section .definition {{
   color: var(--text);
 }}
 .filter-row input[type="search"]:focus-visible {{
-  border-color: var(--brand);
+  border-color: var(--nanda-blue-dark);
 }}
 .filter-count {{
   margin: 0;
@@ -490,31 +497,34 @@ section .definition {{
 .table-scroll {{ overflow-x: auto; }}
 table.studies-table {{
   width: 100%;
-  min-width: 640px;
+  min-width: 720px;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  table-layout: fixed;
 }}
 table.studies-table th,
 table.studies-table td {{
   text-align: left;
-  padding: 0.6rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid #e6e8eb;
   vertical-align: top;
 }}
-table.studies-table th {{
-  background: #f0f3f6;
-  font-weight: 600;
+table.studies-table tbody td {{
+  font-size: 1rem;
   color: var(--text);
+}}
+table.studies-table th {{
+  background: #eef4fa;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--nanda-blue-dark);
 }}
 table.studies-table th.num,
 table.studies-table td.num {{
   text-align: right;
   font-variant-numeric: tabular-nums;
 }}
-table.studies-table {{ table-layout: fixed; }}
-table.studies-table col.col-id {{ width: 5.5rem; }}
-table.studies-table col.col-num {{ width: 7.5rem; }}
-table.studies-table col.col-num-narrow {{ width: 6rem; }}
+table.studies-table col.col-num {{ width: 8.5rem; }}
+table.studies-table col.col-num-narrow {{ width: 7rem; }}
 table.studies-table .title-cell {{
   white-space: normal;
   overflow-wrap: anywhere;
@@ -537,7 +547,7 @@ button.sort-btn {{
   padding: 0;
   margin: 0;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   color: inherit;
   cursor: pointer;
   text-align: inherit;
@@ -549,10 +559,10 @@ button.sort-btn {{
 table.studies-table th.num button.sort-btn {{
   justify-content: flex-end;
 }}
-button.sort-btn:hover {{ color: var(--brand-deep); }}
-th[aria-sort="ascending"] button.sort-btn::after {{ content: "▲"; font-size: 0.7em; color: var(--brand); }}
-th[aria-sort="descending"] button.sort-btn::after {{ content: "▼"; font-size: 0.7em; color: var(--brand); }}
-th[aria-sort="none"] button.sort-btn::after {{ content: "↕"; font-size: 0.75em; color: var(--muted); opacity: 0.6; }}
+button.sort-btn:hover {{ text-decoration: underline; text-underline-offset: 3px; }}
+th[aria-sort="ascending"] button.sort-btn::after {{ content: "▲"; font-size: 0.75em; color: var(--accent); }}
+th[aria-sort="descending"] button.sort-btn::after {{ content: "▼"; font-size: 0.75em; color: var(--accent); }}
+th[aria-sort="none"] button.sort-btn::after {{ content: "↕"; font-size: 0.8em; color: var(--muted); opacity: 0.6; }}
 
 .row-hidden {{ display: none; }}
 
@@ -566,12 +576,12 @@ details {{
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0.5rem 0.85rem;
-  background: #fafbfc;
+  background: var(--nanda-white);
 }}
 details > summary {{
   cursor: pointer;
-  font-weight: 600;
-  color: var(--brand-deep);
+  font-weight: 700;
+  color: var(--nanda-blue-dark);
 }}
 details[open] > summary {{ margin-bottom: 0.5rem; }}
 details p {{ margin: 0.5rem 0 0; }}
@@ -591,7 +601,7 @@ footer nav ul {{
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
 }}
-footer nav a {{ font-weight: 500; }}
+footer nav a {{ font-weight: 700; }}
 footer p {{ margin: 0; }}
 
 @media (max-width: 600px) {{
@@ -672,7 +682,6 @@ footer p {{ margin: 0; }}
   <table id="curated-table" class="studies-table" aria-describedby="curated-def">
     <caption class="visually-hidden">Curated NaNDA datasets, sortable by column.</caption>
     <colgroup>
-      <col class="col-id">
       <col>
       <col class="col-num">
       <col class="col-num">
@@ -681,7 +690,6 @@ footer p {{ margin: 0; }}
     </colgroup>
     <thead>
       <tr>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="study_id" data-type="num">Study ID</button></th>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change this month</button></th>
@@ -709,7 +717,6 @@ footer p {{ margin: 0; }}
   <table id="self-table" class="studies-table" aria-describedby="self-def">
     <caption class="visually-hidden">Self-published NaNDA datasets, sortable by column.</caption>
     <colgroup>
-      <col class="col-id">
       <col>
       <col class="col-num">
       <col class="col-num">
@@ -717,7 +724,6 @@ footer p {{ margin: 0; }}
     </colgroup>
     <thead>
       <tr>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="study_id" data-type="num">Study ID</button></th>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
@@ -767,11 +773,13 @@ new Chart(document.getElementById("ts-chart"), {{
     datasets: [{{
       label: "Downloads",
       data: tsValues,
-      borderColor: "#01528a",
-      backgroundColor: "rgba(1, 82, 138, 0.12)",
+      borderColor: "#1499d6",
+      backgroundColor: "rgba(20, 153, 214, 0.15)",
+      borderWidth: 2,
       fill: true,
       tension: 0.25,
       pointRadius: 2,
+      pointBackgroundColor: "#01528a",
     }}],
   }},
   options: {{
@@ -788,11 +796,13 @@ new Chart(document.getElementById("ts-chart"), {{
     scales: {{
       y: {{
         beginAtZero: true,
-        ticks: {{ callback: v => v.toLocaleString() }},
-        title: {{ display: true, text: "Downloads per month", color: "#555555", font: {{ size: 12 }} }},
+        ticks: {{ callback: v => v.toLocaleString(), color: "#01528a" }},
+        title: {{ display: true, text: "Downloads per month", color: "#01528a", font: {{ size: 13, weight: "700" }} }},
+        grid: {{ color: "rgba(1, 82, 138, 0.08)" }},
       }},
       x: {{
-        ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 16 }},
+        ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 16, color: "#01528a" }},
+        grid: {{ color: "rgba(1, 82, 138, 0.08)" }},
       }},
     }},
   }},
@@ -857,8 +867,8 @@ new Chart(document.getElementById("ts-chart"), {{
       const q = input.value.trim().toLowerCase();
       let visible = 0;
       Array.from(table.tBodies[0].rows).forEach(function(row) {{
-        const id = row.cells[0].textContent.toLowerCase();
-        const title = row.cells[1].textContent.toLowerCase();
+        const id = (row.dataset.studyId || "").toLowerCase();
+        const title = row.cells[0].textContent.toLowerCase();
         const match = q === "" || id.includes(q) || title.includes(q);
         row.classList.toggle("row-hidden", !match);
         if (match) visible++;
