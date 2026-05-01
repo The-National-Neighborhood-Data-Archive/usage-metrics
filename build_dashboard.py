@@ -10,6 +10,8 @@ Inputs:
   data/nanda_usage_timeseries_latest.csv
   data/nanda_usage_stats_YYYY-MM-DD.csv  (most recent strict-pattern file
                                           before today's, for Δ computation)
+  inventory.csv                          (for archive routing: ICPSR vs openICPSR)
+  docs/assets/nanda-logo.svg             (NaNDA wordmark, served alongside HTML)
 
 Output:
   docs/index.html
@@ -31,7 +33,11 @@ DATA_DIR = Path("data")
 OUTPUT_DIR = Path("docs")
 LATEST_CSV  = DATA_DIR / "nanda_usage_stats_latest.csv"
 TIMESERIES_CSV = DATA_DIR / "nanda_usage_timeseries_latest.csv"
+INVENTORY_CSV = Path("inventory.csv")
 DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
+
+NANDA_HOMEPAGE = "https://nanda.isr.umich.edu/"
+GITHUB_REPO = "https://github.com/the-national-neighborhood-data-archive/usage-metrics"
 
 
 def find_previous_snapshot():
@@ -53,10 +59,49 @@ def fmt_int(n):
 
 
 def fmt_signed(n):
-    if pd.isna(n):
+    if pd.isna(n) or n is None:
         return ""
+    n = int(n)
+    if n == 0:
+        return "0"
     sign = "+" if n > 0 else ""
-    return f"{sign}{int(n):,}"
+    return f"{sign}{n:,}"
+
+
+def fmt_human_date(iso_date):
+    """'2026-05-01' -> 'May 1, 2026' (cross-platform; avoids %-d / %#d)."""
+    if not iso_date:
+        return ""
+    dt = datetime.strptime(iso_date, "%Y-%m-%d")
+    return f"{dt.strftime('%B')} {dt.day}, {dt.year}"
+
+
+def fmt_human_month(ym):
+    """'2024-03' -> 'March 2024'."""
+    dt = datetime.strptime(ym, "%Y-%m")
+    return f"{dt.strftime('%B')} {dt.year}"
+
+
+def chart_trend_summary(labels, values):
+    """One-sentence summary for screen readers via aria-label."""
+    if not values:
+        return "Aggregate monthly downloads chart. No data available."
+    peak_idx = values.index(max(values))
+    direction = (
+        "increasing overall"
+        if values[-1] > values[0]
+        else "decreasing overall"
+        if values[-1] < values[0]
+        else "flat overall"
+    )
+    return (
+        f"Aggregate monthly downloads of curated NaNDA datasets, "
+        f"{fmt_human_month(labels[0])} through {fmt_human_month(labels[-1])}. "
+        f"Started at {values[0]:,} downloads in {fmt_human_month(labels[0])}, "
+        f"peaked at {values[peak_idx]:,} in {fmt_human_month(labels[peak_idx])}, "
+        f"ended at {values[-1]:,} in {fmt_human_month(labels[-1])}. "
+        f"Trend is {direction}."
+    )
 
 
 def main() -> None:
@@ -65,21 +110,36 @@ def main() -> None:
         return
 
     OUTPUT_DIR.mkdir(exist_ok=True)
-    today = datetime.now().strftime("%Y-%m-%d")
-    today_human = datetime.now().strftime("%B %d, %Y")
+    today_iso = datetime.now().strftime("%Y-%m-%d")
+    today_human = fmt_human_date(today_iso)
 
     current = pd.read_csv(LATEST_CSV)
+
+    # --- Archive routing from inventory ---
+    if INVENTORY_CSV.exists():
+        inv = pd.read_csv(INVENTORY_CSV)[["study_id", "archive"]]
+        current = current.merge(inv, on="study_id", how="left")
+    else:
+        current["archive"] = "ICPSR"  # fallback; should never hit in CI
 
     # --- Δ computation against most recent prior snapshot ---
     prev = find_previous_snapshot()
     if prev is None:
-        prev_date = None
+        prev_date_iso = None
+        prev_date_human = None
         prev_df = None
         delta_total = None
+        delta_n_datasets = None
+        delta_unique_users = None
     else:
-        prev_date, prev_path = prev
+        prev_date_iso, prev_path = prev
+        prev_date_human = fmt_human_date(prev_date_iso)
         prev_df = pd.read_csv(prev_path)
         delta_total = int(current["total_downloads"].sum() - prev_df["total_downloads"].sum())
+        delta_n_datasets = int(len(current) - len(prev_df))
+        prev_users = int(prev_df["unique_users"].fillna(0).sum())
+        cur_users = int(current["unique_users"].fillna(0).sum())
+        delta_unique_users = cur_users - prev_users
 
     # Per-row deltas via merge
     if prev_df is not None:
@@ -97,7 +157,6 @@ def main() -> None:
     # --- KPIs ---
     total_downloads = int(current["total_downloads"].sum())
     n_datasets = len(current)
-    # unique_users is curated-only, NaN for openICPSR rows
     unique_users_total = int(current["unique_users"].fillna(0).sum())
 
     # --- Time-series aggregate ---
@@ -111,144 +170,591 @@ def main() -> None:
     else:
         ts_labels, ts_values = [], []
 
-    # --- Studies table rows (all 103, sortable client-side) ---
+    trend_summary = chart_trend_summary(ts_labels, ts_values)
+
+    # --- Studies table rows ---
     table_rows = []
     for _, r in merged.iterrows():
         title = r.get("dataset_title")
         title_str = "" if pd.isna(title) else str(title)
-        title_short = title_str if len(title_str) <= 90 else title_str[:89].rstrip() + "…"
         doi = r.get("doi")
         doi_str = "" if pd.isna(doi) else str(doi)
+        url = r.get("url")
+        url_str = "" if pd.isna(url) else str(url)
+        archive = r.get("archive") or "ICPSR"
         table_rows.append({
             "study_id":   int(r["study_id"]),
             "title":      title_str,
-            "title_short": title_short,
             "doi":        doi_str,
+            "url":        url_str,
+            "archive":    archive,
             "total":      int(r["total_downloads"]) if pd.notna(r["total_downloads"]) else 0,
             "delta":      None if pd.isna(r["delta"]) else int(r["delta"]),
-            "users":      None if pd.isna(r["unique_users"]) else int(r["unique_users"]),
+            "users":      None if pd.isna(r.get("unique_users")) else int(r["unique_users"]),
             "pubs":       None if pd.isna(r.get("publications")) else int(r["publications"]),
+            "views":      None if pd.isna(r.get("total_views")) else int(r["total_views"]),
         })
 
-    # --- Render HTML ---
-    delta_kpi_html = (
-        f"<small>{fmt_signed(delta_total)} since {prev_date}</small>"
-        if prev_date is not None else ""
-    )
-    delta_th = f"Change since {prev_date}" if prev_date else "Change"
+    curated_rows = [r for r in table_rows if r["archive"] == "ICPSR"]
+    self_rows = [r for r in table_rows if r["archive"] == "openICPSR"]
 
-    # Build table tbody server-side; client JS just handles sort
-    tbody_rows = []
-    for row in table_rows:
-        delta_cell = "" if row["delta"] is None else fmt_signed(row["delta"])
-        delta_class = ""
-        if row["delta"] is not None:
-            if row["delta"] > 0: delta_class = "delta-pos"
-            elif row["delta"] < 0: delta_class = "delta-neg"
-        users_cell = "" if row["users"] is None else f"{row['users']:,}"
-        pubs_cell  = "" if row["pubs"]  is None else f"{row['pubs']:,}"
-        title_safe = html.escape(row["title_short"])
+    # --- Render helpers ---
+    def title_link(row):
+        title_safe = html.escape(row["title"])
         if row["doi"]:
             href = "https://doi.org/" + row["doi"]
-            title_cell = f'<a href="{html.escape(href)}" target="_blank" rel="noopener noreferrer">{title_safe}</a>'
-        else:
-            title_cell = title_safe
-        tbody_rows.append(
-            f"<tr>"
-            f"<td>{row['study_id']}</td>"
-            f"<td title=\"{html.escape(row['title'])}\">{title_cell}</td>"
-            f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
-            f"<td class=\"num {delta_class}\" data-sort=\"{row['delta'] if row['delta'] is not None else ''}\">{delta_cell}</td>"
-            f"<td class=\"num\" data-sort=\"{row['users'] if row['users'] is not None else ''}\">{users_cell}</td>"
-            f"<td class=\"num\" data-sort=\"{row['pubs']  if row['pubs']  is not None else ''}\">{pubs_cell}</td>"
-            f"</tr>"
+            return f'<a href="{html.escape(href)}">{title_safe}</a>'
+        if row["url"]:
+            return f'<a href="{html.escape(row["url"])}">{title_safe}</a>'
+        return title_safe
+
+    def delta_cell(row):
+        if row["delta"] is None:
+            return '<td class="num" data-sort=""><span class="muted">—</span></td>'
+        cls = ""
+        if row["delta"] > 0:
+            cls = " delta-pos"
+        elif row["delta"] < 0:
+            cls = " delta-neg"
+        return (
+            f'<td class="num{cls}" data-sort="{row["delta"]}">'
+            f'{fmt_signed(row["delta"])}'
+            f'</td>'
         )
 
+    def num_cell(value):
+        if value is None:
+            return '<td class="num" data-sort=""><span class="muted">—</span></td>'
+        return f'<td class="num" data-sort="{value}">{value:,}</td>'
+
+    def render_curated_tbody():
+        out = []
+        for row in curated_rows:
+            out.append(
+                "<tr>"
+                f"<td class=\"num\">{row['study_id']}</td>"
+                f"<td class=\"title-cell\">{title_link(row)}</td>"
+                f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
+                f"{delta_cell(row)}"
+                f"{num_cell(row['users'])}"
+                f"{num_cell(row['pubs'])}"
+                "</tr>"
+            )
+        return "\n".join(out)
+
+    def render_self_tbody():
+        out = []
+        for row in self_rows:
+            out.append(
+                "<tr>"
+                f"<td class=\"num\">{row['study_id']}</td>"
+                f"<td class=\"title-cell\">{title_link(row)}</td>"
+                f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
+                f"{num_cell(row['views'])}"
+                f"{delta_cell(row)}"
+                "</tr>"
+            )
+        return "\n".join(out)
+
+    # --- KPI delta rendering ---
+    def kpi_delta_html(delta, kind="num"):
+        if delta is None or prev_date_iso is None:
+            return '<dd class="kpi-delta muted">— no prior snapshot</dd>'
+        if delta == 0:
+            sign_cls = ""
+            text = f"No change since {prev_date_human}"
+        else:
+            sign_cls = " delta-pos" if delta > 0 else " delta-neg"
+            text = f"{fmt_signed(delta)} since {prev_date_human}"
+        return f'<dd class="kpi-delta{sign_cls}">{html.escape(text)}</dd>'
+
+    # --- Hidden chart data table for screen readers ---
+    chart_data_rows = "\n".join(
+        f"<tr><td>{fmt_human_month(lbl)}</td><td>{val:,}</td></tr>"
+        for lbl, val in zip(ts_labels, ts_values)
+    )
+
+    curated_count = len(curated_rows)
+    self_count = len(self_rows)
+
+    # --- Definitions (used in tooltips/footnotes) ---
+    curated_def = (
+        "Datasets that went through ICPSR's full curation pipeline. "
+        "Curated releases ship with documentation, codebooks, and per-month usage breakdowns; "
+        "they live at icpsr.umich.edu and report unique users, institutions, and citing publications."
+    )
+    self_def = (
+        "Datasets self-deposited via openICPSR. Self-published releases skip the full curation pipeline, "
+        "so usage reporting is limited to total downloads and total project-page views — no per-month "
+        "breakdown, unique-user count, or publication tracking."
+    )
+
+    methodology_text = (
+        "Numbers are aggregated lifetime totals since January 1, 2020, pulled monthly from "
+        "ICPSR's PCMS APIs (curated datasets) and the openICPSR usage endpoint (self-published datasets). "
+        "Curated entries report data and documentation downloads, unique users, and citing publications. "
+        "Self-published entries report total downloads and total project-page views only — openICPSR "
+        "does not expose a per-month breakdown. The dashboard is rebuilt automatically on the first of "
+        "each month from the latest scrape."
+    )
+
+    page_title = f"NaNDA Usage Dashboard — {today_human}"
+
+    # --- HTML document ---
     html_doc = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NaNDA Usage Dashboard — {today}</title>
+<title>{html.escape(page_title)}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
+:root {{
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --muted: #555555;
+  --border: #d0d7de;
+  --brand: #01528a;
+  --brand-deep: #013d68;
+  --pos: #1a7f37;
+  --neg: #b42318;
+  --row-hover: #f0f4f8;
+  --focus: #ff8a00;
+}}
 * {{ box-sizing: border-box; }}
+html {{ scroll-behavior: smooth; overflow-x: hidden; }}
 body {{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  margin: 0; padding: 2rem;
-  background: #f7f7f8; color: #222;
-  max-width: 1200px; margin: 0 auto;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  overflow-x: hidden;
 }}
-h1 {{ margin: 0 0 0.25rem; font-size: 1.6rem; }}
-header p {{ margin: 0 0 1.5rem; color: #666; }}
-section {{ background: #fff; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
-section h2 {{ margin: 0 0 1rem; font-size: 1.1rem; color: #333; }}
-.kpis {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding: 0; background: transparent; box-shadow: none; }}
-.kpi {{ background: #fff; padding: 1.25rem 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
-.kpi h2 {{ margin: 0; font-size: 2rem; font-weight: 700; color: #1a1a1a; }}
-.kpi p {{ margin: 0.25rem 0 0; color: #666; font-size: 0.9rem; }}
-.kpi small {{ display: block; margin-top: 0.5rem; color: #888; font-size: 0.8rem; }}
-.chart-wrap {{ position: relative; height: 320px; }}
-table {{ width: 100%; border-collapse: collapse; font-size: 0.9rem; }}
-th, td {{ text-align: left; padding: 0.55rem 0.75rem; border-bottom: 1px solid #eee; }}
-th {{ cursor: pointer; user-select: none; background: #fafafa; font-weight: 600; }}
-th:hover {{ background: #f0f0f0; }}
-th.sort-asc::after  {{ content: " ▲"; color: #888; }}
-th.sort-desc::after {{ content: " ▼"; color: #888; }}
-td.num {{ text-align: right; font-variant-numeric: tabular-nums; }}
-td.delta-pos {{ color: #1a7f37; }}
-td.delta-neg {{ color: #cf222e; }}
-tbody tr:hover {{ background: #fafbfc; }}
-footer {{ text-align: center; color: #888; font-size: 0.85rem; padding: 1rem 0; }}
+.page {{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 3vw, 2rem) 2rem;
+}}
+.skip-link {{
+  position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;
+}}
+.skip-link:focus {{
+  position: static; width: auto; height: auto; padding: 0.5rem 1rem;
+  background: var(--brand); color: #fff; text-decoration: none; display: inline-block;
+  margin: 0.5rem 0;
+}}
+.visually-hidden {{
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}}
+
+a {{ color: var(--brand); }}
+a:hover {{ color: var(--brand-deep); }}
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {{
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}}
+
+header {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}}
+.brand {{
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}}
+.brand .logo {{
+  height: 44px;
+  width: auto;
+  display: block;
+}}
+.brand h1 {{ margin: 0; font-size: clamp(1.4rem, 2.5vw, 1.8rem); line-height: 1.2; }}
+.tagline {{ margin: 0.25rem 0 0; color: var(--muted); font-size: 0.95rem; max-width: 60ch; }}
+.updated {{ margin: 0; color: var(--muted); font-size: 0.9rem; }}
+.updated time {{ font-weight: 600; color: var(--text); }}
+
+section {{
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}}
+section h2 {{
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  color: var(--text);
+}}
+section .definition {{
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  background: #eef4fa;
+  border-left: 4px solid var(--brand);
+  border-radius: 4px;
+  font-size: 0.92rem;
+  color: var(--text);
+}}
+.definition strong {{ color: var(--brand-deep); }}
+
+/* KPI cards */
+.kpis {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  margin-bottom: 1.5rem;
+}}
+.kpi {{
+  background: var(--surface);
+  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}}
+.kpi dl {{ margin: 0; }}
+.kpi dt {{
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}}
+.kpi-value {{
+  margin: 0.35rem 0 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}}
+.kpi-delta {{
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}}
+.kpi-delta.delta-pos {{ color: var(--pos); }}
+.kpi-delta.delta-neg {{ color: var(--neg); }}
+.kpi-delta.muted {{ color: var(--muted); }}
+
+/* Chart */
+.chart-wrap {{
+  position: relative;
+  height: 320px;
+  margin-top: 0.5rem;
+}}
+.chart-wrap canvas {{ max-width: 100%; }}
+
+/* Filter row */
+.filter-row {{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}}
+.filter-row label {{
+  font-weight: 600;
+  font-size: 0.9rem;
+}}
+.filter-row input[type="search"] {{
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+}}
+.filter-row input[type="search"]:focus-visible {{
+  border-color: var(--brand);
+}}
+.filter-count {{
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}}
+
+/* Tables */
+.table-scroll {{ overflow-x: auto; }}
+table.studies-table {{
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}}
+table.studies-table th,
+table.studies-table td {{
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #e6e8eb;
+  vertical-align: top;
+}}
+table.studies-table th {{
+  background: #f0f3f6;
+  font-weight: 600;
+  color: var(--text);
+}}
+table.studies-table th.num,
+table.studies-table td.num {{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}}
+table.studies-table {{ table-layout: fixed; }}
+table.studies-table col.col-id {{ width: 5.5rem; }}
+table.studies-table col.col-num {{ width: 7.5rem; }}
+table.studies-table col.col-num-narrow {{ width: 6rem; }}
+table.studies-table .title-cell {{
+  white-space: normal;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  line-height: 1.4;
+}}
+table.studies-table .title-cell a {{
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}}
+table.studies-table tbody tr:hover {{ background: var(--row-hover); }}
+.muted {{ color: var(--muted); }}
+.delta-pos {{ color: var(--pos); }}
+.delta-neg {{ color: var(--neg); }}
+
+button.sort-btn {{
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}}
+table.studies-table th.num button.sort-btn {{
+  justify-content: flex-end;
+}}
+button.sort-btn:hover {{ color: var(--brand-deep); }}
+th[aria-sort="ascending"] button.sort-btn::after {{ content: "▲"; font-size: 0.7em; color: var(--brand); }}
+th[aria-sort="descending"] button.sort-btn::after {{ content: "▼"; font-size: 0.7em; color: var(--brand); }}
+th[aria-sort="none"] button.sort-btn::after {{ content: "↕"; font-size: 0.75em; color: var(--muted); opacity: 0.6; }}
+
+.row-hidden {{ display: none; }}
+
+.table-footnote {{
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}}
+
+details {{
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.85rem;
+  background: #fafbfc;
+}}
+details > summary {{
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--brand-deep);
+}}
+details[open] > summary {{ margin-bottom: 0.5rem; }}
+details p {{ margin: 0.5rem 0 0; }}
+
+footer {{
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding: 1.5rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}}
+footer nav ul {{
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}}
+footer nav a {{ font-weight: 500; }}
+footer p {{ margin: 0; }}
+
+@media (max-width: 600px) {{
+  header {{ flex-direction: column; align-items: flex-start; }}
+  .brand .logo {{ height: 36px; }}
+  .kpi {{ padding: 1rem 1.1rem; }}
+  .kpi-value {{ font-size: 1.6rem; }}
+  section {{ padding: 1.1rem; }}
+  table.studies-table {{ font-size: 0.85rem; }}
+  table.studies-table th,
+  table.studies-table td {{ padding: 0.5rem 0.55rem; }}
+}}
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<div class="page">
 <header>
-  <h1>NaNDA Usage Dashboard</h1>
-  <p>Auto-generated from monthly ICPSR / openICPSR scrape — {today_human}</p>
+  <div class="brand">
+    <img src="assets/nanda-logo.svg" alt="National Neighborhood Data Archive logo" class="logo" width="220" height="38">
+    <div>
+      <h1>NaNDA Usage Dashboard</h1>
+      <p class="tagline">The National Neighborhood Data Archive — monthly usage of our datasets on ICPSR and openICPSR.</p>
+    </div>
+  </div>
+  <p class="updated">Last updated <time datetime="{today_iso}">{today_human}</time></p>
 </header>
 
-<section class="kpis">
+<main id="main">
+
+<section class="kpis" aria-label="Key metrics">
   <div class="kpi">
-    <h2>{total_downloads:,}</h2>
-    <p>Total downloads</p>
-    {delta_kpi_html}
+    <dl>
+      <dt>Total downloads</dt>
+      <dd class="kpi-value">{total_downloads:,}</dd>
+      {kpi_delta_html(delta_total)}
+    </dl>
   </div>
   <div class="kpi">
-    <h2>{n_datasets}</h2>
-    <p>Datasets tracked</p>
+    <dl>
+      <dt>Datasets tracked</dt>
+      <dd class="kpi-value">{n_datasets}</dd>
+      {kpi_delta_html(delta_n_datasets)}
+    </dl>
   </div>
   <div class="kpi">
-    <h2>{unique_users_total:,}</h2>
-    <p>Unique users (curated)</p>
+    <dl>
+      <dt>Unique users (curated)</dt>
+      <dd class="kpi-value">{unique_users_total:,}</dd>
+      {kpi_delta_html(delta_unique_users)}
+    </dl>
   </div>
 </section>
 
-<section>
-  <h2>Monthly downloads — aggregate (curated only)</h2>
-  <div class="chart-wrap"><canvas id="ts-chart"></canvas></div>
-</section>
-
-<section>
-  <h2>All studies</h2>
-  <table id="studies-table">
-    <thead>
-      <tr>
-        <th data-key="study_id">Study ID</th>
-        <th data-key="title">Title</th>
-        <th data-key="total" class="num">Total downloads</th>
-        <th data-key="delta" class="num">{html.escape(delta_th)}</th>
-        <th data-key="users" class="num">Unique users</th>
-        <th data-key="pubs"  class="num">Publications</th>
-      </tr>
-    </thead>
+<section aria-labelledby="chart-heading">
+  <h2 id="chart-heading">Monthly downloads — aggregate (curated datasets)</h2>
+  <div class="chart-wrap" role="img" aria-label="{html.escape(trend_summary)}">
+    <canvas id="ts-chart"></canvas>
+  </div>
+  <table class="visually-hidden">
+    <caption>Aggregate monthly downloads — chart data table</caption>
+    <thead><tr><th scope="col">Month</th><th scope="col">Total downloads</th></tr></thead>
     <tbody>
-{chr(10).join("      " + r for r in tbody_rows)}
+{chart_data_rows}
     </tbody>
   </table>
 </section>
 
-<footer>Last updated {today_human}</footer>
+<section aria-labelledby="curated-heading">
+  <h2 id="curated-heading">Curated NaNDA datasets ({curated_count})</h2>
+  <p class="definition" id="curated-def"><strong>Curated:</strong> {html.escape(curated_def)}</p>
+  <div class="filter-row">
+    <label for="filter-curated">Filter</label>
+    <input type="search" id="filter-curated" data-target="curated-table" data-count="filter-curated-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="curated-def filter-curated-count">
+    <p class="filter-count" id="filter-curated-count" aria-live="polite" aria-atomic="true">Showing {curated_count} of {curated_count} curated studies</p>
+  </div>
+  <div class="table-scroll">
+  <table id="curated-table" class="studies-table" aria-describedby="curated-def">
+    <caption class="visually-hidden">Curated NaNDA datasets, sortable by column.</caption>
+    <colgroup>
+      <col class="col-id">
+      <col>
+      <col class="col-num">
+      <col class="col-num">
+      <col class="col-num-narrow">
+      <col class="col-num-narrow">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="study_id" data-type="num">Study ID</button></th>
+        <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
+        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change this month</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="users" data-type="num">Unique users</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="pubs" data-type="num">Publications</button></th>
+      </tr>
+    </thead>
+    <tbody>
+{render_curated_tbody()}
+    </tbody>
+  </table>
+  </div>
+  <p class="table-footnote">Change values compare to the previous monthly snapshot ({"none yet" if prev_date_human is None else prev_date_human}). A dash (—) means no comparable prior value.</p>
+</section>
+
+<section aria-labelledby="self-heading">
+  <h2 id="self-heading">Self-published NaNDA datasets ({self_count})</h2>
+  <p class="definition" id="self-def"><strong>Self-published:</strong> {html.escape(self_def)}</p>
+  <div class="filter-row">
+    <label for="filter-self">Filter</label>
+    <input type="search" id="filter-self" data-target="self-table" data-count="filter-self-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="self-def filter-self-count">
+    <p class="filter-count" id="filter-self-count" aria-live="polite" aria-atomic="true">Showing {self_count} of {self_count} self-published studies</p>
+  </div>
+  <div class="table-scroll">
+  <table id="self-table" class="studies-table" aria-describedby="self-def">
+    <caption class="visually-hidden">Self-published NaNDA datasets, sortable by column.</caption>
+    <colgroup>
+      <col class="col-id">
+      <col>
+      <col class="col-num">
+      <col class="col-num">
+      <col class="col-num">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="study_id" data-type="num">Study ID</button></th>
+        <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
+        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change this month</button></th>
+      </tr>
+    </thead>
+    <tbody>
+{render_self_tbody()}
+    </tbody>
+  </table>
+  </div>
+  <p class="table-footnote">Change values compare to the previous monthly snapshot ({"none yet" if prev_date_human is None else prev_date_human}). A dash (—) means no comparable prior value.</p>
+</section>
+
+<section aria-labelledby="methodology-heading">
+  <h2 id="methodology-heading">How this is calculated</h2>
+  <details>
+    <summary>Show methodology</summary>
+    <p>{html.escape(methodology_text)}</p>
+    <p>Source code, raw CSVs, and the full schema are on <a href="{html.escape(GITHUB_REPO)}">the dashboard's GitHub repository</a>.</p>
+  </details>
+</section>
+
+</main>
+
+<footer class="page-footer">
+  <nav aria-label="Trust links">
+    <ul>
+      <li><a href="{html.escape(NANDA_HOMEPAGE)}">NaNDA homepage</a></li>
+      <li><a href="{html.escape(GITHUB_REPO)}">Dashboard source code on GitHub</a></li>
+      <li><a href="#methodology-heading">How this is calculated</a></li>
+    </ul>
+  </nav>
+  <p>Last updated <time datetime="{today_iso}">{today_human}</time>.</p>
+</footer>
+
+</div>
 
 <script>
 // --- Time-series chart ---
@@ -261,8 +767,8 @@ new Chart(document.getElementById("ts-chart"), {{
     datasets: [{{
       label: "Downloads",
       data: tsValues,
-      borderColor: "#1f6feb",
-      backgroundColor: "rgba(31, 111, 235, 0.1)",
+      borderColor: "#01528a",
+      backgroundColor: "rgba(1, 82, 138, 0.12)",
       fill: true,
       tension: 0.25,
       pointRadius: 2,
@@ -270,45 +776,98 @@ new Chart(document.getElementById("ts-chart"), {{
   }},
   options: {{
     maintainAspectRatio: false,
-    plugins: {{ legend: {{ display: false }} }},
+    animation: false,
+    plugins: {{
+      legend: {{ display: false }},
+      tooltip: {{
+        callbacks: {{
+          label: (ctx) => ctx.parsed.y.toLocaleString() + " downloads",
+        }},
+      }},
+    }},
     scales: {{
-      y: {{ beginAtZero: true, ticks: {{ callback: v => v.toLocaleString() }} }},
-      x: {{ ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 16 }} }},
+      y: {{
+        beginAtZero: true,
+        ticks: {{ callback: v => v.toLocaleString() }},
+        title: {{ display: true, text: "Downloads per month", color: "#555555", font: {{ size: 12 }} }},
+      }},
+      x: {{
+        ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 16 }},
+      }},
     }},
   }},
 }});
 
-// --- Click-to-sort table (vanilla JS) ---
+// --- Sortable + filterable tables ---
 (function() {{
-  const table = document.getElementById("studies-table");
-  const tbody = table.tBodies[0];
-  const ths = Array.from(table.tHead.rows[0].cells);
+  document.querySelectorAll("table.studies-table").forEach(function(table) {{
+    const tbody = table.tBodies[0];
+    const headRow = table.tHead.rows[0];
+    const ths = Array.from(headRow.cells);
 
-  function sortBy(colIdx, asc) {{
-    const rows = Array.from(tbody.rows);
-    rows.sort((a, b) => {{
-      const av = a.cells[colIdx].dataset.sort ?? a.cells[colIdx].textContent;
-      const bv = b.cells[colIdx].dataset.sort ?? b.cells[colIdx].textContent;
-      const an = parseFloat(av), bn = parseFloat(bv);
-      const both = !isNaN(an) && !isNaN(bn);
-      const cmp = both ? an - bn : String(av).localeCompare(String(bv));
-      return asc ? cmp : -cmp;
-    }});
-    rows.forEach(r => tbody.appendChild(r));
-  }}
+    function sortBy(colIdx, asc, type) {{
+      const rows = Array.from(tbody.rows);
+      rows.sort(function(a, b) {{
+        const av = a.cells[colIdx].getAttribute("data-sort");
+        const bv = b.cells[colIdx].getAttribute("data-sort");
+        if (type === "num") {{
+          const aEmpty = (av === null || av === "");
+          const bEmpty = (bv === null || bv === "");
+          if (aEmpty && bEmpty) return 0;
+          if (aEmpty) return 1;
+          if (bEmpty) return -1;
+          const an = parseFloat(av), bn = parseFloat(bv);
+          return asc ? an - bn : bn - an;
+        }}
+        const at = (av === null || av === "") ? a.cells[colIdx].textContent.trim() : av;
+        const bt = (bv === null || bv === "") ? b.cells[colIdx].textContent.trim() : bv;
+        return asc ? at.localeCompare(bt) : bt.localeCompare(at);
+      }});
+      rows.forEach(r => tbody.appendChild(r));
+    }}
 
-  ths.forEach((th, i) => {{
-    th.addEventListener("click", () => {{
-      const asc = !th.classList.contains("sort-asc");
-      ths.forEach(x => x.classList.remove("sort-asc", "sort-desc"));
-      th.classList.add(asc ? "sort-asc" : "sort-desc");
-      sortBy(i, asc);
+    ths.forEach(function(th, i) {{
+      const btn = th.querySelector("button.sort-btn");
+      if (!btn) return;
+      btn.addEventListener("click", function() {{
+        const current = th.getAttribute("aria-sort");
+        const asc = current !== "ascending";
+        ths.forEach(x => x.setAttribute("aria-sort", "none"));
+        th.setAttribute("aria-sort", asc ? "ascending" : "descending");
+        sortBy(i, asc, btn.getAttribute("data-type") || "text");
+      }});
+      // Apply initial sort if header marked as descending/ascending in HTML
+      if (th.getAttribute("aria-sort") === "descending") {{
+        sortBy(i, false, btn.getAttribute("data-type") || "text");
+      }} else if (th.getAttribute("aria-sort") === "ascending") {{
+        sortBy(i, true, btn.getAttribute("data-type") || "text");
+      }}
     }});
   }});
 
-  // Initial sort: total downloads descending
-  ths[2].classList.add("sort-desc");
-  sortBy(2, false);
+  // --- Filter inputs ---
+  document.querySelectorAll('input[type="search"][data-target]').forEach(function(input) {{
+    const table = document.getElementById(input.getAttribute("data-target"));
+    const countEl = document.getElementById(input.getAttribute("data-count"));
+    if (!table || !countEl) return;
+    const baseCount = table.tBodies[0].rows.length;
+    const noun = table.id === "curated-table" ? "curated studies" : "self-published studies";
+
+    input.addEventListener("input", function() {{
+      const q = input.value.trim().toLowerCase();
+      let visible = 0;
+      Array.from(table.tBodies[0].rows).forEach(function(row) {{
+        const id = row.cells[0].textContent.toLowerCase();
+        const title = row.cells[1].textContent.toLowerCase();
+        const match = q === "" || id.includes(q) || title.includes(q);
+        row.classList.toggle("row-hidden", !match);
+        if (match) visible++;
+      }});
+      countEl.textContent = q === ""
+        ? "Showing " + baseCount + " of " + baseCount + " " + noun
+        : "Showing " + visible + " of " + baseCount + " " + noun + " matching \\u201C" + input.value + "\\u201D";
+    }});
+  }});
 }})();
 </script>
 </body>
@@ -320,7 +879,7 @@ new Chart(document.getElementById("ts-chart"), {{
     print(f"Wrote {out_path} ({len(html_doc):,} bytes)")
     print(f"  KPIs: {total_downloads:,} downloads, {n_datasets} datasets, {unique_users_total:,} users")
     print(f"  Time-series points: {len(ts_labels)}")
-    print(f"  Table rows: {len(table_rows)}")
+    print(f"  Curated rows: {len(curated_rows)} | Self-published rows: {len(self_rows)}")
 
 
 if __name__ == "__main__":
