@@ -43,3 +43,6 @@ debug/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local notes (project-scoped task file, not for GitHub)
+TASKS.md
