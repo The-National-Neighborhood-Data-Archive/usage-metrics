@@ -40,16 +40,15 @@ NANDA_HOMEPAGE = "https://nanda.isr.umich.edu/"
 GITHUB_REPO = "https://github.com/the-national-neighborhood-data-archive/usage-metrics"
 
 
-def find_previous_snapshot():
+def find_dated_snapshots():
+    """Return all dated snapshot files sorted ascending by ISO date."""
     files = []
     for f in DATA_DIR.glob("nanda_usage_stats_*.csv"):
         m = DATED_RE.match(f.name)
         if m:
             files.append((m.group(1), f))
     files.sort(key=lambda x: x[0])
-    if len(files) < 2:
-        return None
-    return files[-2]
+    return files
 
 
 def fmt_int(n):
@@ -110,20 +109,34 @@ def main() -> None:
         return
 
     OUTPUT_DIR.mkdir(exist_ok=True)
+
+    # Source of truth for "data freshness" is the latest dated snapshot file.
+    # Fall back to today only if the pipeline has never produced a dated file.
+    snapshots = find_dated_snapshots()
     today_iso = datetime.now().strftime("%Y-%m-%d")
-    today_human = fmt_human_date(today_iso)
+    if snapshots:
+        latest_iso = snapshots[-1][0]
+    else:
+        latest_iso = today_iso
+    latest_human = fmt_human_date(latest_iso)
 
     current = pd.read_csv(LATEST_CSV)
 
-    # --- Archive routing from inventory ---
+    # --- Archive routing + publication status from inventory ---
+    # Inventory's `status` column collides with the scraper's per-row
+    # success/error `status`, so rename on merge to `pub_status`.
     if INVENTORY_CSV.exists():
-        inv = pd.read_csv(INVENTORY_CSV)[["study_id", "archive"]]
+        inv = (
+            pd.read_csv(INVENTORY_CSV)[["study_id", "archive", "status"]]
+            .rename(columns={"status": "pub_status"})
+        )
         current = current.merge(inv, on="study_id", how="left")
     else:
         current["archive"] = "ICPSR"  # fallback; should never hit in CI
+        current["pub_status"] = "published"
 
     # --- Δ computation against most recent prior snapshot ---
-    prev = find_previous_snapshot()
+    prev = snapshots[-2] if len(snapshots) >= 2 else None
     if prev is None:
         prev_date_iso = None
         prev_date_human = None
@@ -182,12 +195,14 @@ def main() -> None:
         url = r.get("url")
         url_str = "" if pd.isna(url) else str(url)
         archive = r.get("archive") or "ICPSR"
+        pub_status = r.get("pub_status") or "published"
         table_rows.append({
             "study_id":   int(r["study_id"]),
             "title":      title_str,
             "doi":        doi_str,
             "url":        url_str,
             "archive":    archive,
+            "pub_status": pub_status,
             "total":      int(r["total_downloads"]) if pd.notna(r["total_downloads"]) else 0,
             "delta":      None if pd.isna(r["delta"]) else int(r["delta"]),
             "users":      None if pd.isna(r.get("unique_users")) else int(r["unique_users"]),
@@ -196,7 +211,9 @@ def main() -> None:
         })
 
     curated_rows = [r for r in table_rows if r["archive"] == "ICPSR"]
-    self_rows = [r for r in table_rows if r["archive"] == "openICPSR"]
+    self_rows = [r for r in table_rows
+                 if r["archive"] == "openICPSR" and r["pub_status"] != "unpublished"]
+    unpublished_rows = [r for r in table_rows if r["pub_status"] == "unpublished"]
 
     # --- Render helpers ---
     def title_link(row):
@@ -241,9 +258,9 @@ def main() -> None:
             )
         return "\n".join(out)
 
-    def render_self_tbody():
+    def render_openicpsr_tbody(rows):
         out = []
-        for row in self_rows:
+        for row in rows:
             out.append(
                 f"<tr data-study-id=\"{row['study_id']}\">"
                 f"<td class=\"title-cell\">{title_link(row)}</td>"
@@ -255,15 +272,17 @@ def main() -> None:
         return "\n".join(out)
 
     # --- KPI delta rendering ---
+    # Window is explicit ("from X to Y") so readers don't have to guess
+    # whether the delta covers a day, a month, or anything in between.
     def kpi_delta_html(delta, kind="num"):
         if delta is None or prev_date_iso is None:
             return '<dd class="kpi-delta muted">— no prior snapshot</dd>'
         if delta == 0:
             sign_cls = ""
-            text = f"No change since {prev_date_human}"
+            text = f"No change from {prev_date_human} to {latest_human}"
         else:
             sign_cls = " delta-pos" if delta > 0 else " delta-neg"
-            text = f"{fmt_signed(delta)} since {prev_date_human}"
+            text = f"{fmt_signed(delta)} from {prev_date_human} to {latest_human}"
         return f'<dd class="kpi-delta{sign_cls}">{html.escape(text)}</dd>'
 
     # --- Hidden chart data table for screen readers ---
@@ -274,6 +293,7 @@ def main() -> None:
 
     curated_count = len(curated_rows)
     self_count = len(self_rows)
+    unpublished_count = len(unpublished_rows)
 
     # --- Definitions (used in tooltips/footnotes) ---
     curated_def = (
@@ -286,10 +306,29 @@ def main() -> None:
         "so usage reporting is limited to total downloads and total project-page views — no per-month "
         "breakdown, unique-user count, or publication tracking."
     )
-
-    delta_header_label = (
-        f"Change since {prev_date_human}" if prev_date_human else "Change"
+    unpublished_def = (
+        "Datasets in NaNDA's inventory marked status=unpublished — openICPSR deposits "
+        "that are not part of the current published release set (typically older or "
+        "superseded versions). Usage reporting matches self-published: total downloads "
+        "and total project-page views only, no per-month breakdown."
     )
+
+    if prev_date_human:
+        delta_header_label = (
+            f"Downloads change ({prev_date_human} → {latest_human})"
+        )
+    else:
+        delta_header_label = "Downloads change"
+
+    if prev_date_human:
+        table_footnote_text = (
+            f"Change values are total downloads from {prev_date_human} to {latest_human} "
+            "(the previous monthly snapshot to the latest). A dash (—) means no comparable prior value."
+        )
+    else:
+        table_footnote_text = (
+            "No prior monthly snapshot to compare against yet — change values will populate next run."
+        )
 
     methodology_text = (
         "Numbers are aggregated lifetime totals since January 1, 2020, pulled monthly from "
@@ -300,7 +339,7 @@ def main() -> None:
         "each month from the latest scrape."
     )
 
-    page_title = f"NaNDA Usage Dashboard — {today_human}"
+    page_title = f"NaNDA Usage Dashboard — {latest_human}"
 
     # --- HTML document ---
     html_doc = f"""<!DOCTYPE html>
@@ -563,6 +602,10 @@ table.studies-table tbody tr:hover {{ background: var(--row-hover); }}
 .muted {{ color: var(--muted); }}
 .delta-pos {{ color: var(--pos); }}
 .delta-neg {{ color: var(--neg); }}
+/* Lift specificity above `table.studies-table tbody td` (0,1,3) so positive
+   deltas actually render in the palette green inside table cells. */
+table.studies-table tbody td.delta-pos {{ color: var(--pos); }}
+table.studies-table tbody td.delta-neg {{ color: var(--neg); }}
 
 button.sort-btn {{
   appearance: none;
@@ -655,7 +698,7 @@ footer p {{ margin: 0; }}
       <h1>NaNDA Usage Dashboard</h1>
       <p class="tagline">The National Neighborhood Data Archive — monthly usage of our datasets on ICPSR and openICPSR.</p>
     </div>
-    <p class="updated">Last updated <time datetime="{today_iso}">{today_human}</time></p>
+    <p class="updated">Data through <time datetime="{latest_iso}">{latest_human}</time></p>
   </div>
 </header>
 
@@ -731,7 +774,7 @@ footer p {{ margin: 0; }}
     </tbody>
   </table>
   </div>
-  <p class="table-footnote">Change values compare to the previous monthly snapshot ({"none yet" if prev_date_human is None else prev_date_human}). A dash (—) means no comparable prior value.</p>
+  <p class="table-footnote">{html.escape(table_footnote_text)}</p>
 </section>
 
 <section aria-labelledby="self-heading">
@@ -760,11 +803,44 @@ footer p {{ margin: 0; }}
       </tr>
     </thead>
     <tbody>
-{render_self_tbody()}
+{render_openicpsr_tbody(self_rows)}
     </tbody>
   </table>
   </div>
-  <p class="table-footnote">Change values compare to the previous monthly snapshot ({"none yet" if prev_date_human is None else prev_date_human}). A dash (—) means no comparable prior value.</p>
+  <p class="table-footnote">{html.escape(table_footnote_text)}</p>
+</section>
+
+<section aria-labelledby="unpublished-heading">
+  <h2 id="unpublished-heading">Unpublished NaNDA datasets ({unpublished_count})</h2>
+  <p class="definition" id="unpublished-def"><strong>Unpublished:</strong> {html.escape(unpublished_def)}</p>
+  <div class="filter-row">
+    <label for="filter-unpublished">Filter</label>
+    <input type="search" id="filter-unpublished" data-target="unpublished-table" data-count="filter-unpublished-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="unpublished-def filter-unpublished-count">
+    <p class="filter-count" id="filter-unpublished-count" aria-live="polite" aria-atomic="true">Showing {unpublished_count} of {unpublished_count} unpublished studies</p>
+  </div>
+  <div class="table-scroll">
+  <table id="unpublished-table" class="studies-table" aria-describedby="unpublished-def">
+    <caption class="visually-hidden">Unpublished NaNDA datasets, sortable by column.</caption>
+    <colgroup>
+      <col>
+      <col class="col-num">
+      <col class="col-num">
+      <col class="col-num">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
+        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
+      </tr>
+    </thead>
+    <tbody>
+{render_openicpsr_tbody(unpublished_rows)}
+    </tbody>
+  </table>
+  </div>
+  <p class="table-footnote">{html.escape(table_footnote_text)}</p>
 </section>
 
 <section aria-labelledby="methodology-heading">
@@ -786,7 +862,7 @@ footer p {{ margin: 0; }}
       <li><a href="#methodology-heading">How this is calculated</a></li>
     </ul>
   </nav>
-  <p>Last updated <time datetime="{today_iso}">{today_human}</time>.</p>
+  <p>Data through <time datetime="{latest_iso}">{latest_human}</time>.</p>
 </footer>
 
 </div>
@@ -891,7 +967,12 @@ new Chart(document.getElementById("ts-chart"), {{
     const countEl = document.getElementById(input.getAttribute("data-count"));
     if (!table || !countEl) return;
     const baseCount = table.tBodies[0].rows.length;
-    const noun = table.id === "curated-table" ? "curated studies" : "self-published studies";
+    const nounByTable = {{
+      "curated-table": "curated studies",
+      "self-table": "self-published studies",
+      "unpublished-table": "unpublished studies",
+    }};
+    const noun = nounByTable[table.id] || "studies";
 
     input.addEventListener("input", function() {{
       const q = input.value.trim().toLowerCase();
@@ -919,7 +1000,11 @@ new Chart(document.getElementById("ts-chart"), {{
     print(f"Wrote {out_path} ({len(html_doc):,} bytes)")
     print(f"  KPIs: {total_downloads:,} downloads, {n_datasets} datasets, {unique_users_total:,} users")
     print(f"  Time-series points: {len(ts_labels)}")
-    print(f"  Curated rows: {len(curated_rows)} | Self-published rows: {len(self_rows)}")
+    print(
+        f"  Curated rows: {len(curated_rows)} | "
+        f"Self-published rows: {len(self_rows)} | "
+        f"Unpublished rows: {len(unpublished_rows)}"
+    )
 
 
 if __name__ == "__main__":
