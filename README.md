@@ -64,7 +64,22 @@ Dataset titles are read from `inventory.csv` at startup, not fetched live. `clou
 
 ## Maintaining the inventory
 
-`inventory.csv` is the single file to edit when datasets are added or removed. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`. To add a dataset, append a row, commit, and push — the next monthly run picks it up automatically.
+`inventory.csv` is the single file to edit when datasets are added or removed. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.
+
+To add a newly-published dataset, use the `add_to_inventory.py` helper. It fetches title, version, version_date, and DOI from DataCite (with a fallback to the public ICPSR page), validates the result, and appends a row. It never commits or pushes — it prints the git commands for you to run after eyeballing the row.
+
+```bash
+python add_to_inventory.py <study_id> --archive {ICPSR|openICPSR} [--deposit-via {legacy|RDE}] [--dry-run] [--force]
+```
+
+Example — add ICPSR 305511 (Parks and Proximity to Polluting Sites):
+
+```bash
+python add_to_inventory.py 305511 --archive ICPSR --dry-run    # preview
+python add_to_inventory.py 305511 --archive ICPSR              # write
+```
+
+Use `--dry-run` to see what would be written; `--force` to overwrite an existing row for the same `study_id` (useful for fixing a typo). Hand-editing `inventory.csv` still works for edge cases the validator rejects.
 
 ## Running locally
 
