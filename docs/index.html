@@ -258,6 +258,10 @@ table.studies-table tbody tr:hover { background: var(--row-hover); }
 .muted { color: var(--muted); }
 .delta-pos { color: var(--pos); }
 .delta-neg { color: var(--neg); }
+/* Lift specificity above `table.studies-table tbody td` (0,1,3) so positive
+   deltas actually render in the palette green inside table cells. */
+table.studies-table tbody td.delta-pos { color: var(--pos); }
+table.studies-table tbody td.delta-neg { color: var(--neg); }
 
 button.sort-btn {
   appearance: none;
@@ -350,7 +354,7 @@ footer p { margin: 0; }
       <h1>NaNDA Usage Dashboard</h1>
       <p class="tagline">The National Neighborhood Data Archive — monthly usage of our datasets on ICPSR and openICPSR.</p>
     </div>
-    <p class="updated">Last updated <time datetime="2026-05-12">May 12, 2026</time></p>
+    <p class="updated">Data through <time datetime="2026-05-12">May 12, 2026</time></p>
   </div>
 </header>
 
@@ -361,21 +365,21 @@ footer p { margin: 0; }
     <dl>
       <dt>Total downloads</dt>
       <dd class="kpi-value">121,336</dd>
-      <dd class="kpi-delta delta-pos">+932 since May 1, 2026</dd>
+      <dd class="kpi-delta delta-pos">+932 from May 1, 2026 to May 12, 2026</dd>
     </dl>
   </div>
   <div class="kpi">
     <dl>
       <dt>Datasets tracked</dt>
       <dd class="kpi-value">105</dd>
-      <dd class="kpi-delta delta-pos">+1 since May 1, 2026</dd>
+      <dd class="kpi-delta delta-pos">+1 from May 1, 2026 to May 12, 2026</dd>
     </dl>
   </div>
   <div class="kpi">
     <dl>
       <dt>Unique users (curated)</dt>
       <dd class="kpi-value">4,642</dd>
-      <dd class="kpi-delta delta-pos">+55 since May 1, 2026</dd>
+      <dd class="kpi-delta delta-pos">+55 from May 1, 2026 to May 12, 2026</dd>
     </dl>
   </div>
 </section>
@@ -460,7 +464,7 @@ footer p { margin: 0; }
       <tr>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change since May 1, 2026</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Downloads change (May 1, 2026 → May 12, 2026)</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="users" data-type="num">Unique users</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="pubs" data-type="num">Publications</button></th>
       </tr>
@@ -489,16 +493,16 @@ footer p { margin: 0; }
     </tbody>
   </table>
   </div>
-  <p class="table-footnote">Change values compare to the previous monthly snapshot (May 1, 2026). A dash (—) means no comparable prior value.</p>
+  <p class="table-footnote">Change values are total downloads from May 1, 2026 to May 12, 2026 (the previous monthly snapshot to the latest). A dash (—) means no comparable prior value.</p>
 </section>
 
 <section aria-labelledby="self-heading">
-  <h2 id="self-heading">Self-published NaNDA datasets (85)</h2>
+  <h2 id="self-heading">Self-published NaNDA datasets (30)</h2>
   <p class="definition" id="self-def"><strong>Self-published:</strong> Datasets self-deposited via openICPSR. Self-published releases skip the full curation pipeline, so usage reporting is limited to total downloads and total project-page views — no per-month breakdown, unique-user count, or publication tracking.</p>
   <div class="filter-row">
     <label for="filter-self">Filter</label>
     <input type="search" id="filter-self" data-target="self-table" data-count="filter-self-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="self-def filter-self-count">
-    <p class="filter-count" id="filter-self-count" aria-live="polite" aria-atomic="true">Showing 85 of 85 self-published studies</p>
+    <p class="filter-count" id="filter-self-count" aria-live="polite" aria-atomic="true">Showing 30 of 30 self-published studies</p>
   </div>
   <div class="table-scroll">
   <table id="self-table" class="studies-table" aria-describedby="self-def">
@@ -514,7 +518,7 @@ footer p { margin: 0; }
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Change since May 1, 2026</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Downloads change (May 1, 2026 → May 12, 2026)</button></th>
       </tr>
     </thead>
     <tbody>
@@ -548,6 +552,38 @@ footer p { margin: 0; }
 <tr data-study-id="302178"><td class="title-cell"><a href="https://doi.org/10.3886/E302178">Essential Workers by Census Tract and ZIP Code Tabulation Area, United States, 2018-2022</a></td><td class="num" data-sort="0">0</td><td class="num" data-sort="0">0</td><td class="num" data-sort="0">0</td></tr>
 <tr data-study-id="302343"><td class="title-cell"><a href="https://doi.org/10.3886/ICPSR302343">Training and Vocation Schools by Census Tract and ZCTA, United States, 1990-2022</a></td><td class="num" data-sort="0">0</td><td class="num" data-sort="0">0</td><td class="num" data-sort="0">0</td></tr>
 <tr data-study-id="302937"><td class="title-cell"><a href="https://doi.org/10.3886/ICPSR302937">Broadband Availability by Census Tract and ZIP Code Tabulation Area (ZCTA), United States, 2025. </a></td><td class="num" data-sort="0">0</td><td class="num" data-sort="0">0</td><td class="num" data-sort="0">0</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="table-footnote">Change values are total downloads from May 1, 2026 to May 12, 2026 (the previous monthly snapshot to the latest). A dash (—) means no comparable prior value.</p>
+</section>
+
+<section aria-labelledby="unpublished-heading">
+  <h2 id="unpublished-heading">Unpublished NaNDA datasets (55)</h2>
+  <p class="definition" id="unpublished-def"><strong>Unpublished:</strong> Datasets in NaNDA&#x27;s inventory marked status=unpublished — openICPSR deposits that are not part of the current published release set (typically older or superseded versions). Usage reporting matches self-published: total downloads and total project-page views only, no per-month breakdown.</p>
+  <div class="filter-row">
+    <label for="filter-unpublished">Filter</label>
+    <input type="search" id="filter-unpublished" data-target="unpublished-table" data-count="filter-unpublished-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="unpublished-def filter-unpublished-count">
+    <p class="filter-count" id="filter-unpublished-count" aria-live="polite" aria-atomic="true">Showing 55 of 55 unpublished studies</p>
+  </div>
+  <div class="table-scroll">
+  <table id="unpublished-table" class="studies-table" aria-describedby="unpublished-def">
+    <caption class="visually-hidden">Unpublished NaNDA datasets, sortable by column.</caption>
+    <colgroup>
+      <col>
+      <col class="col-num">
+      <col class="col-num">
+      <col class="col-num">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
+        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">Downloads change (May 1, 2026 → May 12, 2026)</button></th>
+      </tr>
+    </thead>
+    <tbody>
 <tr data-study-id="110641"><td class="title-cell"><a href="https://doi.org/10.3886/E110641">Street Connectivity by Census Tract, United States, 2010</a></td><td class="num" data-sort="95">95</td><td class="num" data-sort="1002">1,002</td><td class="num" data-sort="0">0</td></tr>
 <tr data-study-id="111107"><td class="title-cell"><a href="https://doi.org/10.3886/E111107">Neighborhood Socioeconomic and Demographic Characteristics of Census Tracts, United States, 2000-2010</a></td><td class="num" data-sort="324">324</td><td class="num" data-sort="3968">3,968</td><td class="num" data-sort="0">0</td></tr>
 <tr data-study-id="111109"><td class="title-cell"><a href="https://doi.org/10.3886/E111109">Public Transit Stops by Census Tract, United States, 2016-2018</a></td><td class="num" data-sort="221">221</td><td class="num" data-sort="2435">2,435</td><td class="num" data-sort="0">0</td></tr>
@@ -606,7 +642,7 @@ footer p { margin: 0; }
     </tbody>
   </table>
   </div>
-  <p class="table-footnote">Change values compare to the previous monthly snapshot (May 1, 2026). A dash (—) means no comparable prior value.</p>
+  <p class="table-footnote">Change values are total downloads from May 1, 2026 to May 12, 2026 (the previous monthly snapshot to the latest). A dash (—) means no comparable prior value.</p>
 </section>
 
 <section aria-labelledby="methodology-heading">
@@ -628,7 +664,7 @@ footer p { margin: 0; }
       <li><a href="#methodology-heading">How this is calculated</a></li>
     </ul>
   </nav>
-  <p>Last updated <time datetime="2026-05-12">May 12, 2026</time>.</p>
+  <p>Data through <time datetime="2026-05-12">May 12, 2026</time>.</p>
 </footer>
 
 </div>
@@ -733,7 +769,12 @@ new Chart(document.getElementById("ts-chart"), {
     const countEl = document.getElementById(input.getAttribute("data-count"));
     if (!table || !countEl) return;
     const baseCount = table.tBodies[0].rows.length;
-    const noun = table.id === "curated-table" ? "curated studies" : "self-published studies";
+    const nounByTable = {
+      "curated-table": "curated studies",
+      "self-table": "self-published studies",
+      "unpublished-table": "unpublished studies",
+    };
+    const noun = nounByTable[table.id] || "studies";
 
     input.addEventListener("input", function() {
       const q = input.value.trim().toLowerCase();
