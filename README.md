@@ -66,20 +66,22 @@ Dataset titles are read from `inventory.csv` at startup, not fetched live. `clou
 
 `inventory.csv` is the single file to edit when datasets are added or removed. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.
 
-To add a newly-published dataset, use the `add_to_inventory.py` helper. It fetches title, version, version_date, and DOI from DataCite (with a fallback to the public ICPSR page), validates the result, and appends a row. It never commits or pushes — it prints the git commands for you to run after eyeballing the row.
+To add a newly-published dataset, use the `add_to_inventory.ps1` PowerShell wrapper. It runs the metadata fetch, the CSV append, and the git commit + push in one shot:
+
+```powershell
+cd usage-metrics
+.\add_to_inventory.ps1 <study_id> -Archive <ICPSR|openICPSR>
+```
+
+Optional flags: `-DepositVia RDE` (default `legacy`), `-DryRun` (preview only, no write, no commit), `-Force` (overwrite an existing row for the same `study_id` — useful for typo fixes). The wrapper prompts before committing so you can eyeball the row first, and runs `git pull --rebase origin main` before pushing in case the monthly scrape committed ahead of you. Run `Get-Help .\add_to_inventory.ps1 -Examples` to see usage examples.
+
+Under the hood, the wrapper calls `add_to_inventory.py`, which fetches title, version, version_date, and DOI from DataCite (with a fallback to the public ICPSR page) and validates the result. To run the Python helper directly without the git steps, call it the same way:
 
 ```bash
 python add_to_inventory.py <study_id> --archive {ICPSR|openICPSR} [--deposit-via {legacy|RDE}] [--dry-run] [--force]
 ```
 
-Example — add ICPSR 305511 (Parks and Proximity to Polluting Sites):
-
-```bash
-python add_to_inventory.py 305511 --archive ICPSR --dry-run    # preview
-python add_to_inventory.py 305511 --archive ICPSR              # write
-```
-
-Use `--dry-run` to see what would be written; `--force` to overwrite an existing row for the same `study_id` (useful for fixing a typo). Hand-editing `inventory.csv` still works for edge cases the validator rejects.
+Hand-editing `inventory.csv` still works for edge cases the validator rejects.
 
 ## Running locally
 
