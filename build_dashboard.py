@@ -264,8 +264,8 @@ def main() -> None:
             out.append(
                 f"<tr data-study-id=\"{row['study_id']}\">"
                 f"<td class=\"title-cell\">{title_link(row)}</td>"
-                f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
                 f"{num_cell(row['views'])}"
+                f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
                 f"{delta_cell(row)}"
                 "</tr>"
             )
@@ -279,10 +279,10 @@ def main() -> None:
             return '<dd class="kpi-delta muted">— no prior snapshot</dd>'
         if delta == 0:
             sign_cls = ""
-            text = f"No change from {prev_date_human} to {latest_human}"
+            text = f"No change {prev_date_human} to {latest_human}"
         else:
             sign_cls = " delta-pos" if delta > 0 else " delta-neg"
-            text = f"{fmt_signed(delta)} from {prev_date_human} to {latest_human}"
+            text = f"{fmt_signed(delta)} {prev_date_human} to {latest_human}"
         return f'<dd class="kpi-delta{sign_cls}">{html.escape(text)}</dd>'
 
     # --- Hidden chart data table for screen readers ---
@@ -315,10 +315,10 @@ def main() -> None:
 
     if prev_date_human:
         delta_header_label = (
-            f"Downloads change ({prev_date_human} → {latest_human})"
+            f"Downloads ({prev_date_human} → {latest_human})"
         )
     else:
-        delta_header_label = "Downloads change"
+        delta_header_label = "Downloads"
 
     if prev_date_human:
         table_footnote_text = (
@@ -653,6 +653,15 @@ details > summary {{
 details[open] > summary {{ margin-bottom: 0.5rem; }}
 details p {{ margin: 0.5rem 0 0; }}
 
+details.section-accordion {{
+  border: none;
+  padding: 0;
+  background: transparent;
+}}
+details.section-accordion > summary {{ cursor: pointer; }}
+details.section-accordion > summary > h2 {{ display: inline; margin: 0; }}
+details.section-accordion p {{ margin: revert; }}
+
 footer {{
   border-top: 1px solid var(--border);
   margin-top: 1rem;
@@ -743,7 +752,8 @@ footer p {{ margin: 0; }}
 </section>
 
 <section aria-labelledby="curated-heading">
-  <h2 id="curated-heading">Curated NaNDA datasets ({curated_count})</h2>
+  <details class="section-accordion" open>
+  <summary><h2 id="curated-heading">Curated NaNDA datasets ({curated_count})</h2></summary>
   <p class="definition" id="curated-def"><strong>Curated:</strong> {html.escape(curated_def)}</p>
   <div class="filter-row">
     <label for="filter-curated">Filter</label>
@@ -775,10 +785,12 @@ footer p {{ margin: 0; }}
   </table>
   </div>
   <p class="table-footnote">{html.escape(table_footnote_text)}</p>
+  </details>
 </section>
 
 <section aria-labelledby="self-heading">
-  <h2 id="self-heading">Self-published NaNDA datasets ({self_count})</h2>
+  <details class="section-accordion" open>
+  <summary><h2 id="self-heading">Self-published NaNDA datasets ({self_count})</h2></summary>
   <p class="definition" id="self-def"><strong>Self-published:</strong> {html.escape(self_def)}</p>
   <div class="filter-row">
     <label for="filter-self">Filter</label>
@@ -797,8 +809,8 @@ footer p {{ margin: 0; }}
     <thead>
       <tr>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
-        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
       </tr>
     </thead>
@@ -808,10 +820,12 @@ footer p {{ margin: 0; }}
   </table>
   </div>
   <p class="table-footnote">{html.escape(table_footnote_text)}</p>
+  </details>
 </section>
 
 <section aria-labelledby="unpublished-heading">
-  <h2 id="unpublished-heading">Unpublished NaNDA datasets ({unpublished_count})</h2>
+  <details class="section-accordion">
+  <summary><h2 id="unpublished-heading">Unpublished NaNDA datasets ({unpublished_count})</h2></summary>
   <p class="definition" id="unpublished-def"><strong>Unpublished:</strong> {html.escape(unpublished_def)}</p>
   <div class="filter-row">
     <label for="filter-unpublished">Filter</label>
@@ -830,8 +844,8 @@ footer p {{ margin: 0; }}
     <thead>
       <tr>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
-        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
       </tr>
     </thead>
@@ -841,6 +855,7 @@ footer p {{ margin: 0; }}
   </table>
   </div>
   <p class="table-footnote">{html.escape(table_footnote_text)}</p>
+  </details>
 </section>
 
 <section aria-labelledby="methodology-heading">
