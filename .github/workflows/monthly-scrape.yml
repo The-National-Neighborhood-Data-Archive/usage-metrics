@@ -41,5 +41,5 @@ jobs:
         git config --local user.name "github-actions[bot]"
         git add data/*.csv data/*.md docs/
         git diff --quiet && git diff --staged --quiet || git commit -m "Update scrape results $(date +'%Y-%m-%d')"
-        git pull --rebase origin main
+        git pull --rebase origin "${GITHUB_REF_NAME}"
         git push
