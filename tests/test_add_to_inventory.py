@@ -74,7 +74,7 @@ def test_happy_path_icpsr_appends_row(temp_inventory):
     new_row = after.iloc[-1]
     assert new_row["study_id"] == 999900
     assert new_row["archive"] == "ICPSR"
-    assert new_row["deposit_via"] == "legacy"
+    assert new_row["deposit_via"] == "RDE"  # new default — RDE is the standard pathway
     assert new_row["status"] == "published"
     assert new_row["title"].startswith(ati.TITLE_PREFIX)
     assert new_row["version"] == "V1"

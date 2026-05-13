@@ -290,8 +290,9 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("study_id", type=int, help="ICPSR or openICPSR study/project ID")
     p.add_argument("--archive", required=True, choices=["ICPSR", "openICPSR"],
                    help="Which archive the dataset lives in")
-    p.add_argument("--deposit-via", default="legacy", choices=["legacy", "RDE"],
-                   help="Deposit pathway (default: legacy)")
+    p.add_argument("--deposit-via", default="RDE", choices=["legacy", "RDE"],
+                   help="Deposit pathway (default: RDE — the standard for "
+                        "all new deposits; legacy is for pre-RDE backfills)")
     p.add_argument("--dry-run", action="store_true",
                    help="Fetch and print the row; do not modify inventory.csv")
     p.add_argument("--force", action="store_true",

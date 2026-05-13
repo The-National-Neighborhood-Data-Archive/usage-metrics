@@ -54,10 +54,11 @@ Long-format with one row per `(study_id, year, month)`. Months with zero activit
 
 ## How it works
 
-The scraper calls ICPSR's PCMS APIs directly. Routing comes from `inventory.csv`'s `archive` column:
+Routing is two-tiered: `deposit_via=RDE` wins first (the only place RDE numbers exist), then `archive` picks the legacy endpoint set.
 
-- **`archive=ICPSR`** (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution` — full breakdown of data vs. documentation downloads, unique users, and institutions.
-- **`archive=openICPSR`**: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project` — total downloads and total views.
+- **`deposit_via=RDE`** (any archive): `www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/products/{id}` — GA4-backed lifetime totals plus a data/documentation download split. No views, no publications, no time-series. Powers the new `/sites/nanda/view/studies/{id}` pages.
+- **`archive=ICPSR`** + legacy (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution` — full breakdown of data vs. documentation downloads, unique users, and institutions.
+- **`archive=openICPSR`** + legacy: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project` — total downloads, total views, and a publications count.
 - **Publications** (curated only): `search.icpsr.umich.edu/.../publications?STUDYQ={id}` — Solr search API; we read `response.numFound` for the count.
 
 Dataset titles are read from `inventory.csv` at startup, not fetched live. `cloudscraper` handles `pcms.icpsr.umich.edu`'s Cloudflare challenge.
@@ -73,12 +74,13 @@ cd usage-metrics
 .\add_to_inventory.ps1 <study_id> -Archive <ICPSR|openICPSR>
 ```
 
-Optional flags: `-DepositVia RDE` (default `legacy`), `-DryRun` (preview only, no write, no commit), `-Force` (overwrite an existing row for the same `study_id` — useful for typo fixes). The wrapper prompts before committing so you can eyeball the row first, and runs `git pull --rebase origin main` before pushing in case the monthly scrape committed ahead of you. Run `Get-Help .\add_to_inventory.ps1 -Examples` to see usage examples.
+Optional flags: `-DepositVia legacy` (default `RDE` — every new deposit goes through the RDE pathway; use `legacy` only for backfilling pre-RDE rows), `-DryRun` (preview only, no write, no commit), `-Force` (overwrite an existing row for the same `study_id` — useful for typo fixes). The wrapper prompts before committing so you can eyeball the row first, and runs `git pull --rebase origin main` before pushing in case the monthly scrape committed ahead of you. Run `Get-Help .\add_to_inventory.ps1 -Examples` to see usage examples.
 
 Under the hood, the wrapper calls `add_to_inventory.py`, which fetches title, version, version_date, and DOI from DataCite (with a fallback to the public ICPSR page) and validates the result. To run the Python helper directly without the git steps, call it the same way:
 
 ```bash
 python add_to_inventory.py <study_id> --archive {ICPSR|openICPSR} [--deposit-via {legacy|RDE}] [--dry-run] [--force]
+# --deposit-via defaults to RDE; pass --deposit-via legacy only for pre-RDE backfills
 ```
 
 Hand-editing `inventory.csv` still works for edge cases the validator rejects.
@@ -104,7 +106,8 @@ To publish the dashboard, enable GitHub Pages: **Settings → Pages → Source: 
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
 - **openICPSR has no documentation/data split.** The openICPSR usage endpoint returns one `totalDownloads` figure with no breakdown.
 - **No geographic breakdown.** PCMS does not expose a country/region/state download breakdown for studies. Verified by probing every plausible endpoint and inspecting the dashboard JS bundles; no such widget exists in the public utilization page.
-- **RDE-deposited datasets return zero usage.** Studies with `deposit_via=RDE` in the inventory (currently 5 rows: 200038, 301419, 302178, 302343, 302937) live in openICPSR but consistently return zero downloads/views from the openICPSR endpoint. Cause unconfirmed — could be too new, or RDE deposits may not yet feed the same metrics pipeline. Future probing target.
+- **RDE totals are GA4-only and not comparable across routes.** Numbers for `deposit_via=RDE` rows come from the NaNDA tenant's GA4-backed usage-statistics endpoint, which only captures activity since GA4 tracking went live on the new tenant. A study that lived in curated PCMS first will look much smaller on the RDE endpoint — e.g., curated 38528 shows ~thousands of lifetime downloads in PCMS but only 105 on the GA4 endpoint. Don't compare an RDE row's total to a curated row's total without that caveat. The GA4 endpoint also returns 500 for very new studies until ingestion catches up (status logged in `error_message`, counts stay at 0).
+- **RDE rows have no per-month time-series, views, publications, or institutions.** The NaNDA usage-statistics endpoint exposes only lifetime totals plus the data/documentation split, so RDE rows are excluded from `nanda_usage_timeseries_*.csv` and leave `total_views`, `publications`, `unique_users`, and `num_institutions` blank.
 
 ## Notes
 

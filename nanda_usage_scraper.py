@@ -8,20 +8,28 @@ them to data/nanda_usage_stats_YYYY-MM-DD.csv.
 Inventory-driven: `inventory.csv` (sibling file) is the source of truth for
 two things:
   - Dataset title (joined onto each row by study_id)
-  - Routing (the `archive` column — "ICPSR" or "openICPSR" — picks which
-    API set to call; ID-length heuristics are no longer used)
+  - Routing — `deposit_via=RDE` wins first (new endpoint required), then
+    `archive` ∈ {ICPSR, openICPSR} picks the legacy endpoint set.
+    ID-length heuristics are not used.
 
 API sources:
 
   1. PCMS metrics API (pcms.icpsr.umich.edu) — for archive=ICPSR (curated):
      - Rich breakdown: data vs documentation downloads, unique users,
-       institutions.
+       institutions. Per-month time-series.
 
-  2. PCMS openICPSR project-usage API — for archive=openICPSR:
+  2. PCMS openICPSR project-usage API — for archive=openICPSR + legacy:
        /pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project
-     - Returns total_downloads and total_views. All-time, no date params.
+     - Returns total_downloads, total_views, related publications count.
+       All-time, no date params.
 
-  3. ICPSR search API (search.icpsr.umich.edu) — curated only:
+  3. NaNDA usage-statistics API (www.icpsr.umich.edu) — for deposit_via=RDE:
+       /sites/api/usage-statistics-api/usage-statistics/products/{id}
+     - GA4-backed totals + data/documentation split. Captures post-migration
+       activity only — numbers do not match curated PCMS for older studies.
+     - No views, no publications, no time-series.
+
+  4. ICPSR search API (search.icpsr.umich.edu) — curated only:
      - Returns the count of related publications.
 
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
@@ -66,6 +74,14 @@ PCMS_INSTITUTION    = "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/instit
 # openICPSR usage view (the React component on the openICPSR project page hits this)
 OPENICPSR_USAGE_URL = (
     "https://pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{sid}/usage/view"
+)
+
+# NaNDA tenant usage-statistics API. Powers the new
+# /sites/nanda/view/studies/{id} pages. RDE deposits do not appear in either
+# PCMS endpoint set; this is the only place their counts exist.
+NANDA_USAGE_STATS_URL = (
+    "https://www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/"
+    "products/{sid}"
 )
 
 # Publications search API — curated ICPSR only.
@@ -227,6 +243,40 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     }
 
 
+def fetch_nanda_usage_stats(study_id: int, scraper) -> dict:
+    """
+    NaNDA-tenant usage stats. Used for RDE deposits, which the openICPSR
+    usage endpoint reports as zero. Response shape:
+
+        {
+          "product_id": "200038",
+          "downloadDetails": {
+            "totalDownloads": 17,
+            "documentationDownloads": 0,
+            "dataDownloads": 17,
+            "most_recent_GA4_timestamp": "...",
+            "most_recent_cron_timestamp": "..."
+          },
+          "time": [...]
+        }
+
+    Counts are GA4-backed, so they reflect post-migration activity only — not
+    comparable to curated PCMS totals for older studies. Endpoint returns 500
+    for very new studies that haven't been ingested yet; callers should treat
+    HTTP errors as a soft failure (record in error_message, leave 0s).
+    """
+    url = NANDA_USAGE_STATS_URL.format(sid=study_id)
+    r = scraper.get(url, timeout=30)
+    r.raise_for_status()
+    j = r.json() or {}
+    dd = j.get("downloadDetails") or {}
+    return {
+        "total_downloads":         int(dd.get("totalDownloads") or 0),
+        "data_downloads":          int(dd.get("dataDownloads") or 0),
+        "documentation_downloads": int(dd.get("documentationDownloads") or 0),
+    }
+
+
 def fetch_publications_count(study_id: int, scraper) -> int:
     """
     Count of related publications for curated ICPSR via the search API.
@@ -245,10 +295,15 @@ def fetch_publications_count(study_id: int, scraper) -> int:
 def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
     """Pull one study's metrics. Returns a dict matching CSV_COLUMNS.
 
-    Routing comes from inventory['archive']:
-      - 'ICPSR'     → PCMS endpoints + publications search API
-      - 'openICPSR' → openICPSR project-usage endpoint
-      - anything else (or missing) → log and skip metric fetches
+    Routing (checked in order):
+      1. deposit_via == 'RDE'         → NaNDA usage-statistics API
+      2. archive == 'ICPSR'           → PCMS endpoints + publications search API
+      3. archive == 'openICPSR'       → openICPSR project-usage endpoint
+      4. anything else (or missing)   → log and skip metric fetches
+
+    RDE wins first because the only place RDE deposit numbers exist is the
+    new NaNDA tenant endpoint — the openICPSR usage view returns zero for
+    them regardless of `archive` value.
     """
     row = {
         "study_id": study_id,
@@ -273,16 +328,19 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
         row["doi"] = strip_doi_version(inv_entry.get("doi"))
         row["url"] = inv_entry.get("url")
         archive = inv_entry.get("archive")
+        deposit_via = inv_entry.get("deposit_via")
 
-        if archive == "openICPSR":
-            # Includes RDE-deposited datasets — data lives in openICPSR
-            # regardless of deposit pathway.
+        if deposit_via == "RDE":
+            # GA4-backed totals from the new NaNDA tenant API. Soft-fail on
+            # HTTP errors — very new RDE deposits 500 here until ingestion
+            # catches up.
             try:
-                usage = fetch_openicpsr_usage(study_id, scraper)
-                row["total_downloads"] = usage["total_downloads"]
-                row["total_views"]     = usage["total_views"]
+                usage = fetch_nanda_usage_stats(study_id, scraper)
+                row["total_downloads"]         = usage["total_downloads"]
+                row["data_downloads"]          = usage["data_downloads"]
+                row["documentation_downloads"] = usage["documentation_downloads"]
             except Exception as e:
-                row["error_message"] = f"openicpsr-usage fallback: {str(e)[:160]}"
+                row["error_message"] = f"nanda-usage-stats: {str(e)[:160]}"
         elif archive == "ICPSR":
             # Curated — PCMS endpoints + publications search API.
             pcms = fetch_pcms(study_id, scraper)
@@ -297,6 +355,13 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
                 except Exception as e:
                     msg = f"pubs: {str(e)[:80]}"
                     row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
+        elif archive == "openICPSR":
+            try:
+                usage = fetch_openicpsr_usage(study_id, scraper)
+                row["total_downloads"] = usage["total_downloads"]
+                row["total_views"]     = usage["total_views"]
+            except Exception as e:
+                row["error_message"] = f"openicpsr-usage fallback: {str(e)[:160]}"
         else:
             row["error_message"] = f"unknown archive value: {archive!r}"
         return row
@@ -345,14 +410,17 @@ def fetch_timeseries(study_id: int, scraper) -> list:
 def scrape_timeseries(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) -> pd.DataFrame:
     """
     Build a long-format monthly time-series for all curated ICPSR studies
-    in `study_ids`. Curated = inventory['archive'] == 'ICPSR'. openICPSR
-    studies are skipped — no time-series endpoint exists for them.
+    in `study_ids`. Curated = inventory['archive'] == 'ICPSR' AND
+    deposit_via != 'RDE'. openICPSR and RDE studies are skipped — neither
+    PCMS curated downloadCount nor the NaNDA usage-statistics endpoint
+    exposes per-month buckets for them.
 
     One row per (study_id, year, month) with separate columns for data
     and documentation downloads. Months with zero activity are omitted.
     """
     curated = [sid for sid in study_ids
-               if inventory.get(sid, {}).get("archive") == "ICPSR"]
+               if inventory.get(sid, {}).get("archive") == "ICPSR"
+               and inventory.get(sid, {}).get("deposit_via") != "RDE"]
     n = len(curated)
     print(f"\nFetching monthly time-series for {n} curated studies")
 
