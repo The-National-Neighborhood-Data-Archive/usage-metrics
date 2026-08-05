@@ -229,12 +229,18 @@ def main() -> None:
         if row["delta"] is None:
             return '<td class="num" data-sort=""><span class="muted">—</span></td>'
         cls = ""
+        title_attr = ""
         if row["delta"] > 0:
             cls = " delta-pos"
         elif row["delta"] < 0:
             cls = " delta-neg"
+            # Cumulative counts only fall when the source revises its
+            # history (or a scrape failed) — say so instead of implying
+            # downloads were lost.
+            title_attr = (' title="Decrease reflects a revision of ICPSR&#39;s '
+                          'historical data or a scrape error, not lost downloads"')
         return (
-            f'<td class="num{cls}" data-sort="{row["delta"]}">'
+            f'<td class="num{cls}" data-sort="{row["delta"]}"{title_attr}>'
             f'{fmt_signed(row["delta"])}'
             f'</td>'
         )
@@ -330,9 +336,31 @@ def main() -> None:
             "No prior monthly snapshot to compare against yet — change values will populate next run."
         )
 
+    # --- Source-revision notice ---
+    # Cumulative lifetime counts can only fall when the source revises or
+    # truncates its history (first seen Aug 2026, when ICPSR dropped
+    # pre-July-2023 curated download history). Annotate the dip; never hide it.
+    delta_report_url = ("https://github.com/The-National-Neighborhood-Data-Archive/"
+                        "usage-metrics/blob/main/data/delta_latest.md")
+    if ((delta_total is not None and delta_total < 0)
+            or (delta_unique_users is not None and delta_unique_users < 0)):
+        revision_notice = f"""
+<aside class="notice" aria-label="Data revision notice">
+  <p><strong>Why did cumulative numbers drop?</strong> Lifetime counts can only fall when
+  ICPSR revises or truncates its historical data, so the decrease since {html.escape(prev_date_human)}
+  reflects a source-side accounting change (or a scrape error), not lost usage. The
+  <a href="{delta_report_url}">latest delta report</a> lists the affected datasets.</p>
+</aside>"""
+    else:
+        revision_notice = ""
+
     methodology_text = (
-        "Numbers are aggregated lifetime totals since January 1, 2020, pulled monthly from "
+        "Numbers are cumulative totals for the historical window ICPSR's APIs currently serve, "
+        "pulled monthly from "
         "ICPSR's PCMS APIs (curated datasets) and the openICPSR usage endpoint (self-published datasets). "
+        "The scrape requests activity since January 1, 2020, but ICPSR retains a bounded history — "
+        "as of August 2026 it serves curated download history from July 2023 forward, having removed "
+        "older activity from its reporting. "
         "Curated entries report data and documentation downloads, unique users, and citing publications. "
         "Self-published entries report total downloads and total project-page views only — openICPSR "
         "does not expose a per-month breakdown. The dashboard is rebuilt automatically on the first of "
@@ -473,6 +501,17 @@ section .definition {{
   font-size: 0.92rem;
   color: var(--text);
 }}
+.notice {{
+  margin: 0 0 1.5rem;
+  padding: 0.85rem 1rem;
+  background: #fff7e6;
+  border: 1px solid var(--border);
+  border-left: 4px solid #b45309;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--text);
+}}
+.notice p {{ margin: 0; }}
 .definition strong {{ color: var(--text); font-weight: 700; }}
 
 /* KPI cards */
@@ -736,6 +775,7 @@ footer p {{ margin: 0; }}
     </dl>
   </div>
 </section>
+{revision_notice}
 
 <section aria-labelledby="chart-heading">
   <h2 id="chart-heading">Monthly downloads — aggregate (curated datasets)</h2>
