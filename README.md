@@ -65,9 +65,11 @@ Dataset titles are read from `inventory.csv` at startup, not fetched live. `clou
 
 ## Maintaining the inventory
 
-`inventory.csv` is the single file to edit when datasets are added or removed. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.
+`inventory.csv` is the source of truth for what gets tracked. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.
 
-To add a newly-published dataset, use the `add_to_inventory.ps1` PowerShell wrapper. It runs the metadata fetch, the CSV append, and the git commit + push in one shot:
+**As of 2026-08-24, `inventory.csv` is generated** by the private `nanda-inventory` repo's daily `dpm-sync` GitHub Actions pipeline: when a curator marks a dataset `Done!` in the DPM Workflows sheet, that pipeline enriches it via DataCite and pushes the updated `inventory.csv` here. Treat it like `docs/index.html` — don't hand-edit it as a routine practice; routine changes belong in the DPM sheet or in `nanda-inventory`'s `deposit_status.csv`. The manual paths below remain as the escape hatch for edge cases (the pipeline preserves hand-added and hand-edited rows; it only appends new deposits and removes superseded ones).
+
+To add a newly-published dataset manually (escape hatch), use the `add_to_inventory.ps1` PowerShell wrapper. It runs the metadata fetch, the CSV append, and the git commit + push in one shot:
 
 ```powershell
 cd usage-metrics
