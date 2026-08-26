@@ -103,7 +103,7 @@ CSV_COLUMNS = [
     "documentation_downloads",
     "unique_users",
     "num_institutions",
-    "status",
+    "scrape_status",
     "error_message",
     "timestamp",
 ]
@@ -317,7 +317,7 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
         "documentation_downloads": None,
         "unique_users": None,
         "num_institutions": None,
-        "status": "success",
+        "scrape_status": "success",
         "error_message": "",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
@@ -367,7 +367,7 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
         return row
 
     except Exception as e:
-        row["status"] = "error"
+        row["scrape_status"] = "error"
         row["error_message"] = str(e)[:200]
         return row
 
@@ -378,7 +378,7 @@ def scrape_all(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) -> pd.D
     for i, sid in enumerate(study_ids, 1):
         row = scrape_study(sid, scraper, inventory)
         rows.append(row)
-        if row["status"] == "success":
+        if row["scrape_status"] == "success":
             tag = "ok " if row["total_downloads"] else "0  "
             print(
                 f"  [{i:>3}/{n}] {sid:<7} {tag} "
@@ -486,9 +486,9 @@ def main() -> None:
     df.to_csv(dated_path, index=False)
     df.to_csv(latest_path, index=False)
 
-    n_ok    = (df["status"] == "success").sum()
-    n_err   = (df["status"] == "error").sum()
-    n_real  = ((df["status"] == "success") & (df["total_downloads"] > 0)).sum()
+    n_ok    = (df["scrape_status"] == "success").sum()
+    n_err   = (df["scrape_status"] == "error").sum()
+    n_real  = ((df["scrape_status"] == "success") & (df["total_downloads"] > 0)).sum()
 
     print()
     print(f"Wrote {dated_path}")

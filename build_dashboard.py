@@ -123,8 +123,10 @@ def main() -> None:
     current = pd.read_csv(LATEST_CSV)
 
     # --- Archive routing + publication status from inventory ---
-    # Inventory's `status` column collides with the scraper's per-row
-    # success/error `status`, so rename on merge to `pub_status`.
+    # Rename inventory's `status` to `pub_status` on merge. The scraper's
+    # per-row column is now `scrape_status`, but snapshots generated before
+    # 2026-08 still carry it as `status` — keep the rename so merging against
+    # an older latest.csv can never collide.
     if INVENTORY_CSV.exists():
         inv = (
             pd.read_csv(INVENTORY_CSV)[["study_id", "archive", "status"]]

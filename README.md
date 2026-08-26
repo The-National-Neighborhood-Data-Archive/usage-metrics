@@ -34,8 +34,8 @@ All under `data/` unless noted:
 | `documentation_downloads` | Documentation file downloads (curated only; blank for openICPSR) |
 | `unique_users` | Distinct users who downloaded (curated only; blank for openICPSR) |
 | `num_institutions` | Distinct institutions that downloaded (curated only; blank for openICPSR) |
-| `status` | `success` or `error` |
-| `error_message` | Populated when `status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value) |
+| `scrape_status` | `success` or `error` — did this row's scrape work (snapshots dated before 2026-08 call this column `status`) |
+| `error_message` | Populated when `scrape_status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value) |
 | `timestamp` | When this row was scraped |
 
 ### Time-series (`nanda_usage_timeseries_*.csv`)
