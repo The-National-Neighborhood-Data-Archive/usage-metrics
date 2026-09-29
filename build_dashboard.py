@@ -7,9 +7,13 @@ CDN.
 
 Inputs:
   data/nanda_usage_stats_latest.csv
-  data/nanda_usage_timeseries_latest.csv
   data/nanda_usage_stats_YYYY-MM-DD.csv  (most recent strict-pattern file
                                           before today's, for Δ computation)
+  data/nanda_usage_timeseries_YYYY-MM-DD.csv
+  data/nanda_download_history.csv        (both read through build_history.py,
+                                          which rebuilds the month-by-month
+                                          history behind curated download
+                                          totals, their Δ, and the trend chart)
   inventory.csv                          (for archive routing: ICPSR vs openICPSR)
   docs/assets/nanda-logo.svg             (NaNDA wordmark, served alongside HTML)
 
@@ -29,10 +33,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from build_history import apply_history_totals, build_history, preserved_downloads
+
 DATA_DIR = Path("data")
 OUTPUT_DIR = Path("docs")
 LATEST_CSV  = DATA_DIR / "nanda_usage_stats_latest.csv"
-TIMESERIES_CSV = DATA_DIR / "nanda_usage_timeseries_latest.csv"
 INVENTORY_CSV = Path("inventory.csv")
 DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
 
@@ -122,6 +127,16 @@ def main() -> None:
 
     current = pd.read_csv(LATEST_CSV)
 
+    # --- Download totals from the saved month-by-month history ---
+    # ICPSR keeps a rolling three-year window and trims its oldest months in
+    # batches, so the totals it reports shrink at every trim. Any study with
+    # history rows takes its total from the history sum (build_history.py);
+    # everything else keeps its reported total. Unique users can't be
+    # rebuilt this way and stay as ICPSR reports them.
+    history = build_history(DATA_DIR)
+    current = apply_history_totals(current, history)
+    preserved = preserved_downloads(history, current["study_id"])
+
     # --- Archive routing + publication status from inventory ---
     # Rename inventory's `status` to `pub_status` on merge. The scraper's
     # per-row column is now `scrape_status`, but snapshots generated before
@@ -149,7 +164,11 @@ def main() -> None:
     else:
         prev_date_iso, prev_path = prev
         prev_date_human = fmt_human_date(prev_date_iso)
-        prev_df = pd.read_csv(prev_path)
+        # Same treatment as of the previous snapshot, so the Δ compares
+        # like with like and an ICPSR trim doesn't read as lost downloads.
+        prev_df = apply_history_totals(
+            pd.read_csv(prev_path), build_history(DATA_DIR, cutoff=prev_date_iso)
+        )
         delta_total = int(current["total_downloads"].sum() - prev_df["total_downloads"].sum())
         delta_n_datasets = int(len(current) - len(prev_df))
         prev_users = int(prev_df["unique_users"].fillna(0).sum())
@@ -174,12 +193,12 @@ def main() -> None:
     n_datasets = len(current)
     unique_users_total = int(current["unique_users"].fillna(0).sum())
 
-    # --- Time-series aggregate ---
-    if TIMESERIES_CSV.exists():
-        ts = pd.read_csv(TIMESERIES_CSV)
-        monthly = (ts.groupby(["year", "month"], as_index=False)["total_downloads"]
-                     .sum()
-                     .sort_values(["year", "month"]))
+    # --- Time-series aggregate (from the history, so months ICPSR has
+    # dropped stay on the chart) ---
+    if not history.empty:
+        monthly = (history.groupby(["year", "month"], as_index=False)["total_downloads"]
+                          .sum()
+                          .sort_values(["year", "month"]))
         ts_labels = [f"{int(y)}-{int(m):02d}" for y, m in zip(monthly["year"], monthly["month"])]
         ts_values = [int(v) for v in monthly["total_downloads"]]
     else:
@@ -339,34 +358,39 @@ def main() -> None:
         )
 
     # --- Source-revision notice ---
-    # Cumulative lifetime counts can only fall when the source revises or
-    # truncates its history (first seen Aug 2026, when ICPSR dropped
-    # pre-July-2023 curated download history). Annotate the dip; never hide it.
+    # Download totals keep the months ICPSR trims (see build_history.py), but
+    # unique users only cover the window ICPSR currently serves, so they can
+    # still fall at a trim; a scrape error can pull either number down.
+    # Annotate the dip; never hide it.
     delta_report_url = ("https://github.com/The-National-Neighborhood-Data-Archive/"
                         "usage-metrics/blob/main/data/delta_latest.md")
     if ((delta_total is not None and delta_total < 0)
             or (delta_unique_users is not None and delta_unique_users < 0)):
         revision_notice = f"""
 <aside class="notice" aria-label="Data revision notice">
-  <p><strong>Why did cumulative numbers drop?</strong> Lifetime counts can only fall when
-  ICPSR revises or truncates its historical data, so the decrease since {html.escape(prev_date_human)}
-  reflects a source-side accounting change (or a scrape error), not lost usage. The
+  <p><strong>Why did a number drop?</strong> Download totals keep months ICPSR has removed,
+  but unique users only cover the window ICPSR currently reports, so they can fall when ICPSR
+  trims its oldest months. A drop can also come from a scrape error. The
   <a href="{delta_report_url}">latest delta report</a> lists the affected datasets.</p>
 </aside>"""
     else:
         revision_notice = ""
 
+    history_start = f", which begins in {fmt_human_month(ts_labels[0])}" if ts_labels else ""
     methodology_text = (
-        "Numbers are cumulative totals for the historical window ICPSR's APIs currently serve, "
-        "pulled monthly from "
-        "ICPSR's PCMS APIs (curated datasets) and the openICPSR usage endpoint (self-published datasets). "
-        "The scrape requests activity since January 1, 2020, but ICPSR retains a bounded history — "
-        "as of August 2026 it serves curated download history from July 2023 forward, having removed "
-        "older activity from its reporting. "
-        "Curated entries report data and documentation downloads, unique users, and citing publications. "
-        "Self-published entries report total downloads and total project-page views only — openICPSR "
-        "does not expose a per-month breakdown. The dashboard is rebuilt automatically on the first of "
-        "each month from the latest scrape."
+        "Numbers are pulled monthly from ICPSR's PCMS APIs (curated datasets) and the openICPSR "
+        "usage endpoint (self-published datasets). ICPSR keeps a rolling three-year window of "
+        "download history and periodically removes older months from its reporting. So those "
+        "downloads stay counted, this dashboard saves every monthly scrape and totals curated "
+        f"downloads from that saved month-by-month history{history_start}. "
+        f"Of the {total_downloads:,} downloads shown, {preserved:,} come from months ICPSR no "
+        "longer reports. Unique users can't be added up across months, so that figure covers "
+        "only the window ICPSR currently serves (roughly the past three years). Curated entries "
+        "report data and documentation downloads, unique users, and citing publications. "
+        "Self-published entries report total downloads and total project-page views only, "
+        "because openICPSR does not expose a per-month breakdown; they appear as ICPSR reports "
+        "them. The dashboard is rebuilt automatically on the first of each month from the "
+        "latest scrape."
     )
 
     page_title = f"NaNDA Usage Dashboard — {latest_human}"
@@ -771,7 +795,7 @@ footer p {{ margin: 0; }}
   </div>
   <div class="kpi">
     <dl>
-      <dt>Unique users (curated)</dt>
+      <dt>Unique users (curated, past 3 years)</dt>
       <dd class="kpi-value">{unique_users_total:,}</dd>
       {kpi_delta_html(delta_unique_users)}
     </dl>
@@ -817,7 +841,7 @@ footer p {{ margin: 0; }}
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
-        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="users" data-type="num">Unique users</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="users" data-type="num">Unique users (past 3 years)</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="pubs" data-type="num">Publications</button></th>
       </tr>
     </thead>
@@ -1056,6 +1080,7 @@ new Chart(document.getElementById("ts-chart"), {{
     out_path.write_text(html_doc, encoding="utf-8")
     print(f"Wrote {out_path} ({len(html_doc):,} bytes)")
     print(f"  KPIs: {total_downloads:,} downloads, {n_datasets} datasets, {unique_users_total:,} users")
+    print(f"  Downloads preserved from months ICPSR no longer reports: {preserved:,}")
     print(f"  Time-series points: {len(ts_labels)}")
     print(
         f"  Curated rows: {len(curated_rows)} | "

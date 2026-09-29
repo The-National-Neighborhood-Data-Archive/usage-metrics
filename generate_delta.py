@@ -8,6 +8,10 @@ Reads:
   data/nanda_usage_stats_YYYY-MM-DD.csv  (most recent strict-pattern file
                                           before today's; ignores _revised
                                           and _latest)
+  data/nanda_download_history.csv        (optional; only for the "Dashboard
+                                          total" bullet. Everything else in
+                                          the report stays on ICPSR-reported
+                                          numbers)
 
 Writes:
   data/delta_{today}.md
@@ -21,6 +25,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+
+from build_history import HISTORY_CSV, apply_history_totals, preserved_downloads, read_history
 
 DATA_DIR = Path("data")
 LATEST_CSV = DATA_DIR / "nanda_usage_stats_latest.csv"
@@ -147,6 +153,22 @@ def timeseries_window_shift(prev_date: str):
     return None
 
 
+def dashboard_total_line(current: pd.DataFrame, history_csv: Path = HISTORY_CSV):
+    """
+    Reconcile this report's ICPSR-reported total with the dashboard's,
+    which totals curated downloads from the saved month-by-month history
+    (build_history.py) and so keeps months ICPSR no longer reports.
+    Returns None when there is no history file.
+    """
+    history = read_history(history_csv)
+    if history is None:
+        return None
+    dashboard_total = int(apply_history_totals(current, history)["total_downloads"].sum())
+    preserved = preserved_downloads(history, current["study_id"])
+    return (f"- **Dashboard total, including downloads ICPSR no longer reports:** "
+            f"{dashboard_total:,} ({preserved:,} preserved from earlier scrapes)")
+
+
 def section_new_studies(new_df: pd.DataFrame) -> str:
     if new_df.empty:
         return "_None._"
@@ -235,6 +257,9 @@ def main() -> None:
                           f"dataset{'s' if len(suspect) != 1 else ''} with scrape errors")
         net_line += " — " + " · ".join(pieces)
 
+    dashboard_line = dashboard_total_line(current)
+    dashboard_block = [dashboard_line] if dashboard_line else []
+
     # Canary: did the source's history window lose months since last time?
     warn_block = []
     shift = timeseries_window_shift(prev_date)
@@ -260,6 +285,7 @@ def main() -> None:
         "",
         f"- **Total downloads across all of NaNDA:** {total_curr:,} (was {total_prev:,})",
         net_line,
+        *dashboard_block,
         f"- **Datasets in this report:** {len(current)} ({len(new_df)} new since {prev_date})",
         "",
         "## Datasets with the most new downloads",

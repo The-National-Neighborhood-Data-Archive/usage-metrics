@@ -112,3 +112,9 @@ Concretely (for the follow-up pass, once approved):
 - Files compared: `nanda_usage_stats_latest.csv` (≡ `nanda_usage_stats_2026-08-01.csv`, verified byte-identical) vs `nanda_usage_stats_2026-07-01.csv`. Pairing confirmed correct.
 - No changes made to `nanda_usage_scraper.py`, `generate_delta.py`, `build_dashboard.py`, the workflow, or any snapshot. The only live API access was two read-only GET probes of PCMS `downloadCount`.
 - Analysis scripts and merged diff CSV live in the session scratchpad, not the repo.
+
+## Update, 2026-09-29
+
+- **ICPSR confirmed the cause.** ICPSR told Lindsay that it keeps a rolling three-year window of download history and drops anything older. The August truncation was the first trim under that rule, so more are coming.
+- **Trims come in batches, not monthly.** The September 1 scrape's earliest served month stayed at 2023-07, so the window did not advance with the calendar. The next trim date is unknown.
+- **Fix item 5 is implemented.** `build_history.py` combines every saved time-series snapshot into `data/nanda_download_history.csv` (for each study and month, the newest snapshot wins), so months ICPSR has dropped keep their last saved value. The dashboard now takes curated download totals, their month-over-month change, and the trend chart from that history, which puts the 3,417 downloads from September 2022 through June 2023 back in the totals (128,590 across all datasets as of the September 1 scrape, against 125,173 reported by ICPSR). Unique users can't be rebuilt, so they stay as ICPSR reports them and are now labeled "past 3 years". The delta report stays on ICPSR-reported numbers, with one added line giving the dashboard total so the two reconcile. Items 1 to 4 were already in place.

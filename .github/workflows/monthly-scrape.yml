@@ -27,6 +27,10 @@ jobs:
       run: |
         python nanda_usage_scraper.py
 
+    - name: Build download history
+      run: |
+        python build_history.py
+
     - name: Generate delta report
       run: |
         python generate_delta.py
