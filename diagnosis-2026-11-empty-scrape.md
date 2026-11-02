@@ -1,6 +1,6 @@
 # Diagnosis: empty scrape in the 2026-11-01 update
 
-**Date:** 2026-11-02 · **Status:** guardrail shipped, November 1 scrape quarantined, rerun pending (see the update at the end).
+**Date:** 2026-11-02 · **Status:** fixed. Root cause was the GitHub runner image; the scrape runs on `ubuntu-24.04` again and the dashboard is republished (see the update at the end).
 
 ## Summary
 
@@ -41,3 +41,13 @@ The dashboard damage came from `nanda_usage_stats_latest.csv`: openICPSR and RDE
    - 2026-10-01 vs 2026-09-01: **passes**.
 
 The retries cannot get past a lasting IP block. If ICPSR keeps refusing GitHub's runners, the options are running the scrape from Lindsay's machine (the existing fallback in `README.md`) or asking ICPSR to allow the traffic. Both are decisions for Lindsay, not code changes.
+
+## Update, 2026-11-02: root cause found and fixed
+
+- **First rerun (run `41465478147`) was blocked again, and the guardrail worked.** The new warning lines showed every PCMS request getting `HTTP 403 (server=cloudflare, cf-mitigated=challenge)` with a "Just a moment..." challenge page. `check_scrape.py` failed, the run moved the scrape to `data/quarantine/2026-11-02/`, skipped the rebuild, and ended red. The dashboard kept its numbers.
+- **Root cause: GitHub's new runner image.** GitHub began moving `ubuntu-latest` to Ubuntu 26.04 on 2026-10-19. The 2026-10-01 run used image `ubuntu-24.04` (20260927) and worked. The 2026-11-01 run and the first rerun used `ubuntu-26.04` (20261021 and 20261025), and Cloudflare challenged every request from them. Same scraper, same code, same Python version (3.11 from `setup-python`); only the operating system image changed.
+- **Fix: `runs-on: ubuntu-24.04`** in `.github/workflows/monthly-scrape.yml`. The rerun on that image (run `41471218334`) finished green: the guardrail passed (2 of 102 previously nonzero studies at 0, 12 time-series rows for October 2026, 4,628 curated unique users), and the dashboard shows 131,948 total downloads (+1,231) with an October 2026 row.
+- **Remaining warnings in the green run**, both ICPSR-side and outside this fix:
+  - 115006 and 115323 (openICPSR) timed out after retries and show 0, as they did in some earlier months. The delta report lists them as scrape errors.
+  - The publications search API (`search.icpsr.umich.edu`) returned HTTP 500 for all 19 curated studies, also from Lindsay's machine, so the Publications column is blank this month. It worked on 2026-10-01.
+- **Follow-up:** `ubuntu-24.04` is a pinned image that GitHub will eventually retire. Before then, the scrape needs to work from Ubuntu 26.04 or move to another runner. Nothing to do yet.
