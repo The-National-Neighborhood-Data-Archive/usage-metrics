@@ -27,6 +27,25 @@ jobs:
       run: |
         python nanda_usage_scraper.py
 
+    # Guardrail: compare the new scrape to the previous one. On failure the
+    # new dated files move to data/quarantine/<date>/, the history and
+    # dashboard steps below are skipped (the live dashboard keeps last
+    # month's numbers), and the job ends red so GitHub emails the owner.
+    - name: Check scrape
+      id: check_scrape
+      run: |
+        python check_scrape.py --quarantine
+
+    - name: Commit quarantined scrape
+      if: failure() && steps.check_scrape.outcome == 'failure'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add data/quarantine/
+        git commit -m "Quarantine failed scrape $(date +'%Y-%m-%d')" -m "check_scrape.py rejected this scrape, so the download history and dashboard were not rebuilt. See the Check scrape step log."
+        git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+        git push
+
     - name: Build download history
       run: |
         python build_history.py

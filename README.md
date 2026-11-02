@@ -83,6 +83,18 @@ Dataset titles are read from `inventory.csv` at startup, not fetched live. `clou
 
 **Never prune the dated snapshot files** (`nanda_usage_stats_YYYY-MM-DD.csv` and `nanda_usage_timeseries_YYYY-MM-DD.csv`). They are the archive of record: months ICPSR has dropped exist nowhere else, and the history is rebuilt from them on every run.
 
+**Scrape guardrail and quarantine.** Between the scrape and `build_history.py`, the workflow runs `check_scrape.py`, which compares the new snapshot to the previous dated one. It fails if any of these is true:
+
+- more than 25% of studies that had a nonzero total last time now report 0 or are missing;
+- the curated time-series has no rows for the most recent complete month (the calendar month before the scrape date);
+- curated unique users add up to 0 when the previous scrape's sum was above 0.
+
+An ICPSR history trim lowers totals and unique users but passes all three. When the check fails, the run moves the new dated snapshot and time-series files into `data/quarantine/<scrape-date>/`, commits and pushes only that folder, skips the history, delta, and dashboard steps (so the live dashboard keeps last month's numbers), and ends red so GitHub emails the repo owner. `build_history.py`, `generate_delta.py`, and `build_dashboard.py` read only the top level of `data/`, so quarantined files never reach the history or the dashboard. The first quarantined scrape is 2026-11-01 (see `diagnosis-2026-11-empty-scrape.md`).
+
+To test a quarantined scrape by hand: `python check_scrape.py --stats data/quarantine/<date>/nanda_usage_stats_<date>.csv --prev-stats data/nanda_usage_stats_<previous-date>.csv`. If a quarantined scrape turns out to be valid, release it: move its files back to `data/`, then run `python build_history.py`, `python generate_delta.py`, and `python build_dashboard.py`, and commit the results.
+
+The scraper prints a `WARN <study_id>` line for every request that ends in a non-200 response (with the status, server, and Cloudflare `cf-mitigated` header) and for every PCMS response with no monthly buckets. It retries 403, 429, 5xx, and timeouts twice, with a short wait, before giving up.
+
 ## Maintaining the inventory
 
 `inventory.csv` is the source of truth for what gets tracked. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.

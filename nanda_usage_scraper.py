@@ -62,6 +62,12 @@ END_DATE = datetime.now().strftime("%m/%d/%Y")
 # Polite pause between studies.
 REQUEST_DELAY = 1
 
+# Retries for responses that are often transient (Cloudflare 403 challenges,
+# rate limits, server errors, timeouts). Waits RETRY_BACKOFF * attempt seconds.
+RETRY_STATUSES = {403, 429, 500, 502, 503, 504}
+MAX_RETRIES = 2
+RETRY_BACKOFF = 5
+
 # Full NaNDA study list — derived from inventory.csv (column `study_id`).
 # To add a new study, append a row to inventory.csv; no scraper edit needed.
 STUDY_IDS = [int(x) for x in pd.read_csv(INVENTORY_PATH, encoding="utf-8")["study_id"]]
@@ -176,6 +182,43 @@ def make_scraper() -> cloudscraper.CloudScraper:
     return scraper
 
 
+def warn(study_id, msg: str) -> None:
+    """One greppable line per failed or empty fetch, so a broken scrape is loud."""
+    print(f"  WARN {study_id}: {msg}", flush=True)
+
+
+def get_checked(scraper, url, study_id, label, **kwargs):
+    """
+    GET with retries on transient failures. On a final non-200 response,
+    log a warning naming the study, status, server, and Cloudflare headers
+    (cf-mitigated: challenge means Cloudflare blocked the request), then
+    raise. Returns the successful response.
+    """
+    kwargs.setdefault("timeout", 30)
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            r = scraper.get(url, **kwargs)
+        except Exception as e:
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_BACKOFF * (attempt + 1))
+                continue
+            warn(study_id, f"{label}: request failed: {str(e)[:120]}")
+            raise
+        if r.status_code == 200:
+            return r
+        if r.status_code in RETRY_STATUSES and attempt < MAX_RETRIES:
+            time.sleep(RETRY_BACKOFF * (attempt + 1))
+            continue
+        warn(study_id,
+             f"{label}: HTTP {r.status_code} "
+             f"(server={r.headers.get('server')}, "
+             f"cf-mitigated={r.headers.get('cf-mitigated')}, "
+             f"cf-ray={r.headers.get('cf-ray')}) "
+             f"body={r.text[:80]!r}")
+        r.raise_for_status()
+        return r
+
+
 def fetch_pcms(study_id: int, scraper) -> dict:
     """
     Try the PCMS endpoints. Returns a dict with keys:
@@ -198,11 +241,12 @@ def fetch_pcms(study_id: int, scraper) -> dict:
     headers = {"Referer": referer}
 
     # Download counts
-    r = scraper.get(PCMS_DOWNLOAD_COUNT, params=params, headers=headers, timeout=30)
-    r.raise_for_status()
+    r = get_checked(scraper, PCMS_DOWNLOAD_COUNT, study_id, "pcms downloadCount",
+                    params=params, headers=headers)
     download_data = r.json() or []
     if not download_data:
-        return out  # openICPSR — PCMS doesn't cover it
+        warn(study_id, "pcms downloadCount: 200 but no monthly buckets")
+        return out
 
     out["has_data"] = True
     data_total = sum(item["downloads"] for item in download_data if item.get("type") == "data")
@@ -212,15 +256,15 @@ def fetch_pcms(study_id: int, scraper) -> dict:
     out["total_downloads"] = data_total + doc_total
 
     # Unique users
-    r = scraper.get(PCMS_DOWNLOAD_INFO, params=params, headers=headers, timeout=30)
-    r.raise_for_status()
+    r = get_checked(scraper, PCMS_DOWNLOAD_INFO, study_id, "pcms downloadInfo",
+                    params=params, headers=headers)
     info_data = r.json() or []
     if info_data:
         out["unique_users"] = info_data[0].get("uniqueUsers")
 
     # Institutions
-    r = scraper.get(PCMS_INSTITUTION, params=params, headers=headers, timeout=30)
-    r.raise_for_status()
+    r = get_checked(scraper, PCMS_INSTITUTION, study_id, "pcms institution",
+                    params=params, headers=headers)
     inst_data = r.json() or []
     out["num_institutions"] = len(inst_data)
 
@@ -234,8 +278,7 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     total_downloads, total_views (both int, 0 if missing).
     """
     url = OPENICPSR_USAGE_URL.format(sid=study_id)
-    r = scraper.get(url, params={"level": "project"}, timeout=30)
-    r.raise_for_status()
+    r = get_checked(scraper, url, study_id, "openicpsr usage", params={"level": "project"})
     j = r.json() or {}
     return {
         "total_downloads": int(j.get("totalDownloads") or 0),
@@ -266,8 +309,7 @@ def fetch_nanda_usage_stats(study_id: int, scraper) -> dict:
     HTTP errors as a soft failure (record in error_message, leave 0s).
     """
     url = NANDA_USAGE_STATS_URL.format(sid=study_id)
-    r = scraper.get(url, timeout=30)
-    r.raise_for_status()
+    r = get_checked(scraper, url, study_id, "nanda usage-stats")
     j = r.json() or {}
     dd = j.get("downloadDetails") or {}
     return {
@@ -287,8 +329,7 @@ def fetch_publications_count(study_id: int, scraper) -> int:
         "isUserLoggedIn": "false",
         "STUDYQ": study_id,
     }
-    r = scraper.get(PUBLICATIONS_API, params=params, timeout=30)
-    r.raise_for_status()
+    r = get_checked(scraper, PUBLICATIONS_API, study_id, "publications", params=params)
     return int(r.json().get("response", {}).get("numFound", 0))
 
 
@@ -401,10 +442,12 @@ def fetch_timeseries(study_id: int, scraper) -> list:
     """
     params = {"studyId": study_id, "startDt": START_DATE, "endDt": END_DATE}
     referer = f"https://pcms.icpsr.umich.edu/pcms/metrics/studies/{study_id}/utilization"
-    r = scraper.get(PCMS_DOWNLOAD_COUNT, params=params,
-                    headers={"Referer": referer}, timeout=30)
-    r.raise_for_status()
-    return r.json() or []
+    r = get_checked(scraper, PCMS_DOWNLOAD_COUNT, study_id, "timeseries downloadCount",
+                    params=params, headers={"Referer": referer})
+    items = r.json() or []
+    if not items:
+        warn(study_id, "timeseries downloadCount: 200 but no monthly buckets")
+    return items
 
 
 def scrape_timeseries(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) -> pd.DataFrame:
