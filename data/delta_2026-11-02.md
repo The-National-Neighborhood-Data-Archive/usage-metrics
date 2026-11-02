@@ -3,9 +3,9 @@ _What changed since the last snapshot on 2026-10-01._
 
 ## At a glance
 
-- **Total downloads across all of NaNDA:** 128,531 (was 127,300)
-- **Net change:** +1,231 (+1.0%) — +1,529 new downloads · -298 across 2 datasets with scrape errors
-- **Dashboard total, including downloads ICPSR no longer reports:** 131,948 (3,417 preserved from earlier scrapes)
+- **Total downloads across all of NaNDA:** 128,829 (was 127,300)
+- **Net change:** +1,529 (+1.2%)
+- **Dashboard total, including downloads ICPSR no longer reports:** 132,246 (3,417 preserved from earlier scrapes)
 - **Datasets in this report:** 104 (0 new since 2026-10-01)
 
 ## Datasets with the most new downloads
@@ -37,10 +37,7 @@ _None._
 ## Possible scrape problems
 _These had downloads last time but show zero now — probably a glitch pulling data, worth a look. They're excluded from the movers and the net-change breakdown above._
 
-| ID | Dataset | Was | Now | Error |
-|---|---|---:|---:|---|
-| 115006 | Crimes by County, United States, 2002-2014 | 289 | 0 | openicpsr-usage fallback: HTTPSConnectionPool(host='pcms.ic… |
-| 115323 | Fast-Food Restaurants by Census Tract, United States, 2006-2015 | 9 | 0 | openicpsr-usage fallback: HTTPSConnectionPool(host='pcms.ic… |
+_None._
 
 ## Datasets we started tracking since 2026-10-01
 
