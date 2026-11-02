@@ -29,7 +29,7 @@ API sources:
        activity only — numbers do not match curated PCMS for older studies.
      - No views, no publications, no time-series.
 
-  4. ICPSR search API (search.icpsr.umich.edu) — curated only:
+  4. ICPSR Solr biblio API (www.icpsr.umich.edu/sites/api/solr/biblio), curated only:
      - Returns the count of related publications.
 
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
@@ -90,12 +90,11 @@ NANDA_USAGE_STATS_URL = (
     "products/{sid}"
 )
 
-# Publications search API — curated ICPSR only.
+# Publications Solr API, curated ICPSR only. Same endpoint the public
+# "Related publications" study page calls (the old search.icpsr.umich.edu
+# API was retired in the Nov 2026 site move and returns HTTP 500).
 # Returns Solr-style JSON with `response.numFound` = count of related publications.
-PUBLICATIONS_API = (
-    "https://search.icpsr.umich.edu/search/api/1.0/default/search/"
-    "applications/icpsr/modules/icpsr/publications"
-)
+PUBLICATIONS_API = "https://www.icpsr.umich.edu/sites/api/solr/biblio/query_dm"
 
 CSV_COLUMNS = [
     "study_id",
@@ -325,9 +324,10 @@ def fetch_publications_count(study_id: int, scraper) -> int:
     Reads `response.numFound` from a Solr-style JSON response.
     """
     params = {
-        "requestUrl": f"https://www.icpsr.umich.edu/web/ICPSR/studies/{study_id}/publications",
-        "isUserLoggedIn": "false",
-        "STUDYQ": study_id,
+        "wt": "json", "facet": "false", "hl": "false",
+        "start": 0, "rows": 0,
+        "q": f"STUDYQ:{study_id}",
+        "fq": "STATUS:approved",
     }
     r = get_checked(scraper, PUBLICATIONS_API, study_id, "publications", params=params)
     return int(r.json().get("response", {}).get("numFound", 0))

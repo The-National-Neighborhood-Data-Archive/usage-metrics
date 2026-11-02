@@ -75,7 +75,7 @@ Routing is two-tiered: `deposit_via=RDE` wins first (the only place RDE numbers 
 - **`deposit_via=RDE`** (any archive): `www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/products/{id}` — GA4-backed lifetime totals plus a data/documentation download split. No views, no publications, no time-series. Powers the new `/sites/nanda/view/studies/{id}` pages.
 - **`archive=ICPSR`** + legacy (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution` — full breakdown of data vs. documentation downloads, unique users, and institutions.
 - **`archive=openICPSR`** + legacy: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project` — total downloads, total views, and a publications count.
-- **Publications** (curated only): `search.icpsr.umich.edu/.../publications?STUDYQ={id}` — Solr search API; we read `response.numFound` for the count.
+- **Publications** (curated only): `www.icpsr.umich.edu/sites/api/solr/biblio/query_dm?q=STUDYQ:{id}&fq=STATUS:approved`, the Solr endpoint the public "Related publications" page uses; we read `response.numFound` for the count.
 
 Dataset titles are read from `inventory.csv` at startup, not fetched live. `cloudscraper` handles `pcms.icpsr.umich.edu`'s Cloudflare challenge.
 
