@@ -4,6 +4,8 @@ The National Neighborhood Data Archive (NaNDA) publishes contextual data on US n
 
 **Live dashboard:** [the-national-neighborhood-data-archive.github.io/usage-metrics](https://the-national-neighborhood-data-archive.github.io/usage-metrics/)
 
+Terms (`status`, `scrape_status`, `archive`, `deposit_via`, curated, self-published) are defined in [VOCABULARY.md](VOCABULARY.md).
+
 ## What's in this repo
 
 A Python scraper (`nanda_usage_scraper.py`) runs monthly via GitHub Actions, hitting ICPSR's PCMS APIs for every dataset listed in `inventory.csv`. It produces a monthly snapshot CSV, a long-format monthly time-series CSV, a running download history rebuilt from every saved scrape, a Markdown delta report comparing the latest run to the previous one, and a self-contained HTML dashboard. `inventory.csv` is the single source of truth for what gets tracked — append a row there to add a dataset.
