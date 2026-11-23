@@ -8,7 +8,7 @@ Terms (`status`, `scrape_status`, `archive`, `deposit_via`, curated, self-publis
 
 ## What's in this repo
 
-A Python scraper (`nanda_usage_scraper.py`) runs monthly via GitHub Actions, hitting ICPSR's PCMS APIs for every dataset listed in `inventory.csv`. It produces a monthly snapshot CSV, a long-format monthly time-series CSV, a running download history rebuilt from every saved scrape, a Markdown delta report comparing the latest run to the previous one, and a self-contained HTML dashboard. `inventory.csv` is the single source of truth for what gets tracked — append a row there to add a dataset.
+A Python scraper (`nanda_usage_scraper.py`) runs monthly via GitHub Actions, hitting ICPSR's PCMS APIs for every dataset listed in `inventory.csv`. It produces a monthly snapshot CSV, a long-format monthly time-series CSV, a running download history rebuilt from every saved scrape, a Markdown delta report comparing the latest run to the previous one, and a self-contained HTML dashboard. `inventory.csv` lists what gets tracked. It is generated weekly from the private `nanda-inventory` repo's `deposit_status.csv`, where the dataset list is kept; see "Maintaining the inventory".
 
 ## Outputs
 
@@ -99,27 +99,15 @@ The scraper prints a `WARN <study_id>` line for every request that ends in a non
 
 ## Maintaining the inventory
 
-`inventory.csv` is the source of truth for what gets tracked. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.
+`inventory.csv` is generated. Every Monday the private `nanda-inventory` repo's weekly job writes it from scratch from that repo's `deposit_status.csv`, the one place the NaNDA dataset list is kept, and pushes it here. Each row carries `study_id`, `archive` (`ICPSR` or `openICPSR`), `deposit_via` (`legacy` or `RDE`), `status` (`published` or `unpublished`), `title`, `version`, `version_date`, `doi`, and `url`. The scraper derives the list of studies to scrape from `study_id` at runtime, joins titles by ID, and routes API calls by `archive`.
 
-**As of 2026-08-24, `inventory.csv` is generated** by the private `nanda-inventory` repo's weekly curation-pipeline-sync GitHub Actions pipeline: when a curator marks a dataset `Done!` in the NaNDA Curation Pipeline sheet, that pipeline enriches it via DataCite and pushes the updated `inventory.csv` here. Treat it like `docs/index.html` — don't hand-edit it as a routine practice; routine changes belong in the NaNDA Curation Pipeline sheet or in `nanda-inventory`'s `deposit_status.csv`. The manual paths below remain as the escape hatch for edge cases (the pipeline preserves hand-added and hand-edited rows; it only appends new deposits and removes superseded ones).
+Do not hand-edit `inventory.csv`: the next weekly run overwrites it. Adds, fixes, and removals all happen in `nanda-inventory/deposit_status.csv`:
 
-To add a newly-published dataset manually (escape hatch), use the `add_to_inventory.ps1` PowerShell wrapper. It runs the metadata fetch, the CSV append, and the git commit + push in one shot:
+- A newly published dataset enters when a curator marks it `Done!` in the NaNDA Curation Pipeline sheet. To add one outside that path, append a row to `deposit_status.csv`.
+- To fix a title, version, or URL, edit the cell in `deposit_status.csv`. Versions and version dates also refresh weekly from the ICPSR study pages.
+- To remove a dataset, delete its row from `deposit_status.csv`. The next export drops it here. The export refuses to run if a single week would drop more than five rows.
 
-```powershell
-cd usage-metrics
-.\add_to_inventory.ps1 <study_id> -Archive <ICPSR|openICPSR>
-```
-
-Optional flags: `-DepositVia legacy` (default `RDE` — every new deposit goes through the RDE pathway; use `legacy` only for backfilling pre-RDE rows), `-DryRun` (preview only, no write, no commit), `-Force` (overwrite an existing row for the same `study_id` — useful for typo fixes). The wrapper prompts before committing so you can eyeball the row first, and runs `git pull --rebase origin main` before pushing in case the monthly scrape committed ahead of you. Run `Get-Help .\add_to_inventory.ps1 -Examples` to see usage examples.
-
-Under the hood, the wrapper calls `add_to_inventory.py`, which fetches title, version, version_date, and DOI from DataCite (with a fallback to the public ICPSR page) and validates the result. To run the Python helper directly without the git steps, call it the same way:
-
-```bash
-python add_to_inventory.py <study_id> --archive {ICPSR|openICPSR} [--deposit-via {legacy|RDE}] [--dry-run] [--force]
-# --deposit-via defaults to RDE; pass --deposit-via legacy only for pre-RDE backfills
-```
-
-Hand-editing `inventory.csv` still works for edge cases the validator rejects.
+The `add_to_inventory.ps1` and `add_to_inventory.py` helpers that used to append rows here were retired on 2026-11-23, since they wrote to a file that is now regenerated weekly. They remain in git history.
 
 ## Running locally
 

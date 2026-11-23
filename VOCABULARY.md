@@ -7,7 +7,7 @@ Plain-language definitions of the status and category terms used in this repo. T
 
 | Term | Where it lives | Values | Meaning |
 |------|----------------|--------|---------|
-| `status` | `inventory.csv` | `published`, `unpublished` | Publication axis: whether this deposit is part of the current published release set. `unpublished` rows are kept in the inventory but shown in their own dashboard table; most are older openICPSR deposits. The weekly export from nanda-inventory derives this from `deposit_state` (see its VOCABULARY.md) and passes existing `unpublished` rows through untouched. |
+| `status` | `inventory.csv` | `published`, `unpublished` | Publication axis: whether this deposit is part of the current published release set. `unpublished` rows are kept in the inventory but shown in their own dashboard table; most are older openICPSR deposits. Exported unchanged each week from the `pub_status` column of nanda-inventory's `deposit_status.csv` (see its VOCABULARY.md). |
 | `pub_status` | `build_dashboard.py`, in memory only | same as `status` | The dashboard's alias for inventory `status` after it merges the inventory into the latest snapshot. Snapshots dated before 2026-08 call the scrape-outcome column `status`, so the rename keeps the two from colliding. Never written to a file. |
 | `scrape_status` | snapshot CSVs (`nanda_usage_stats_*.csv`) | `success`, `error` | Did this row's scrape work in this run. Says nothing about publication. Snapshots dated before 2026-08 call this column `status`. |
 | `archive` | `inventory.csv` | `ICPSR`, `openICPSR` | Which catalog the deposit lives in. For `deposit_via=legacy` rows it picks the API endpoint set. It also drives the dashboard's curated vs. self-published split. |
