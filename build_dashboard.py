@@ -14,7 +14,9 @@ Inputs:
                                           which rebuilds the month-by-month
                                           history behind curated download
                                           totals, their Δ, and the trend chart)
-  inventory.csv                          (for archive routing: ICPSR vs openICPSR)
+  inventory.csv                          (for archive routing: ICPSR vs openICPSR,
+                                          and deposit_via for the one-time
+                                          two-source notice)
   docs/assets/nanda-logo.svg             (NaNDA wordmark, served alongside HTML)
 
 Output:
@@ -34,6 +36,7 @@ from pathlib import Path
 import pandas as pd
 
 from build_history import apply_history_totals, build_history, preserved_downloads
+from generate_delta import first_both_sources_notice
 
 DATA_DIR = Path("data")
 OUTPUT_DIR = Path("docs")
@@ -143,14 +146,22 @@ def main() -> None:
     # 2026-08 still carry it as `status` — keep the rename so merging against
     # an older latest.csv can never collide.
     if INVENTORY_CSV.exists():
+        inventory = pd.read_csv(INVENTORY_CSV)
         inv = (
-            pd.read_csv(INVENTORY_CSV)[["study_id", "archive", "status"]]
+            inventory[["study_id", "archive", "status"]]
             .rename(columns={"status": "pub_status"})
         )
         current = current.merge(inv, on="study_id", how="left")
     else:
+        inventory = None
         current["archive"] = "ICPSR"  # fallback; should never hit in CI
         current["pub_status"] = "published"
+
+    # Self-published rows carry both usage sources since 2026-11. Older
+    # snapshots lack the two columns; treat them as missing.
+    for col in ("earlier_version_downloads", "current_deposit_downloads"):
+        if col not in current.columns:
+            current[col] = pd.NA
 
     # --- Δ computation against most recent prior snapshot ---
     prev = snapshots[-2] if len(snapshots) >= 2 else None
@@ -229,6 +240,8 @@ def main() -> None:
             "users":      None if pd.isna(r.get("unique_users")) else int(r["unique_users"]),
             "pubs":       None if pd.isna(r.get("publications")) else int(r["publications"]),
             "views":      None if pd.isna(r.get("total_views")) else int(r["total_views"]),
+            "earlier":    None if pd.isna(r.get("earlier_version_downloads")) else int(r["earlier_version_downloads"]),
+            "current":    None if pd.isna(r.get("current_deposit_downloads")) else int(r["current_deposit_downloads"]),
         })
 
     curated_rows = [r for r in table_rows if r["archive"] == "ICPSR"]
@@ -285,6 +298,16 @@ def main() -> None:
             )
         return "\n".join(out)
 
+    def source_cell(value, other):
+        # A dataset with nothing in one source shows 0, not a dash: the
+        # source was asked and had nothing to add. Only when neither source
+        # column exists (a snapshot from before 2026-12) is the value
+        # unknown, and then a dash with a text alternative is shown.
+        if value is None and other is None:
+            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">—</span>'
+                    '<span class="visually-hidden">not reported</span></td>')
+        return num_cell(0 if value is None else value)
+
     def render_openicpsr_tbody(rows):
         out = []
         for row in rows:
@@ -292,6 +315,8 @@ def main() -> None:
                 f"<tr data-study-id=\"{row['study_id']}\">"
                 f"<td class=\"title-cell\">{title_link(row)}</td>"
                 f"{num_cell(row['views'])}"
+                f"{source_cell(row['earlier'], row['current'])}"
+                f"{source_cell(row['current'], row['earlier'])}"
                 f"<td class=\"num\" data-sort=\"{row['total']}\">{row['total']:,}</td>"
                 f"{delta_cell(row)}"
                 "</tr>"
@@ -329,9 +354,17 @@ def main() -> None:
         "they live at icpsr.umich.edu and report unique users, institutions, and citing publications."
     )
     self_def = (
-        "Datasets self-deposited via openICPSR. Self-published releases skip the full curation pipeline, "
-        "so usage reporting is limited to total downloads and total project-page views — no per-month "
-        "breakdown, unique-user count, or publication tracking."
+        "Datasets deposited through ICPSR's self-deposit system (formerly openICPSR). "
+        "Self-published releases skip the full curation pipeline, so usage reporting is limited "
+        "to total downloads and project-page views: no per-month breakdown, unique-user count, "
+        "or publication tracking."
+    )
+    # One note per table (not a marker on every row) tying the two source
+    # columns to the total. Attached to the table with aria-describedby.
+    sources_note = (
+        "Total downloads add two numbers: downloads of the earlier version on openICPSR, "
+        "and downloads of the current deposit in ICPSR's self-deposit system. "
+        "A small number of downloads may be counted in both."
     )
     unpublished_def = (
         "Datasets in NaNDA's inventory marked status=unpublished — openICPSR deposits "
@@ -376,10 +409,27 @@ def main() -> None:
     else:
         revision_notice = ""
 
+    # --- One-time two-source notice ---
+    # Shown only for the first build whose snapshot carries both usage
+    # sources for self-published datasets while the previous snapshot does
+    # not. The headline and per-row changes jump by downloads that were
+    # always there; say so. Independent of the trim notice above; both can
+    # show in the same month.
+    both_sources_text = first_both_sources_notice(current, prev_df, inventory)
+    if both_sources_text:
+        revision_notice = f"""
+<aside class="notice" aria-label="New usage source notice">
+  <p><strong>New usage source.</strong> {html.escape(both_sources_text)} The two parts are the
+  Earlier version and Current deposit columns of the self-published and unpublished tables.</p>
+</aside>""" + revision_notice
+
     history_start = f", which begins in {fmt_human_month(ts_labels[0])}" if ts_labels else ""
     methodology_text = (
-        "Numbers are pulled monthly from ICPSR's PCMS APIs (curated datasets) and the openICPSR "
-        "usage endpoint (self-published datasets). ICPSR keeps a rolling three-year window of "
+        "Numbers are pulled monthly from ICPSR's PCMS APIs (curated datasets) and, for "
+        "self-published datasets, from two sources that are added together: the openICPSR usage "
+        "endpoint, which holds downloads of the earlier version of each dataset, and the "
+        "usage-statistics endpoint of ICPSR's self-deposit system, which holds downloads of the "
+        "current deposit. ICPSR keeps a rolling three-year window of "
         "download history and periodically removes older months from its reporting. So those "
         "downloads stay counted, this dashboard saves every monthly scrape and totals curated "
         f"downloads from that saved month-by-month history{history_start}. "
@@ -388,9 +438,9 @@ def main() -> None:
         "only the window ICPSR currently serves (roughly the past three years). Curated entries "
         "report data and documentation downloads, unique users, and citing publications. "
         "Self-published entries report total downloads and total project-page views only, "
-        "because openICPSR does not expose a per-month breakdown; they appear as ICPSR reports "
-        "them. The dashboard is rebuilt automatically on the first of each month from the "
-        "latest scrape."
+        "because neither source exposes a per-month breakdown; they appear as ICPSR reports "
+        "them, and a small number of downloads may be counted in both sources. The dashboard "
+        "is rebuilt automatically on the first of each month from the latest scrape."
     )
 
     page_title = f"NaNDA Usage Dashboard — {latest_human}"
@@ -652,6 +702,10 @@ table.studies-table td.num {{
   font-variant-numeric: tabular-nums;
 }}
 table.studies-table col.col-num {{ width: 8.5rem; }}
+/* Six-column tables (self-published, unpublished): narrower number columns
+   and a wider minimum so the title column keeps room to read. */
+table.studies-table.six-col {{ min-width: 62rem; }}
+table.studies-table.six-col col.col-num {{ width: 7rem; }}
 table.studies-table col.col-num-narrow {{ width: 7rem; }}
 table.studies-table .title-cell {{
   white-space: normal;
@@ -858,16 +912,19 @@ footer p {{ margin: 0; }}
   <details class="section-accordion" open>
   <summary><h2 id="self-heading">Self-published NaNDA datasets ({self_count})</h2></summary>
   <p class="definition" id="self-def"><strong>Self-published:</strong> {html.escape(self_def)}</p>
+  <p class="definition" id="self-sources-note"><strong>Two sources:</strong> {html.escape(sources_note)}</p>
   <div class="filter-row">
     <label for="filter-self">Filter</label>
     <input type="search" id="filter-self" data-target="self-table" data-count="filter-self-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="self-def filter-self-count">
     <p class="filter-count" id="filter-self-count" aria-live="polite" aria-atomic="true">Showing {self_count} of {self_count} self-published studies</p>
   </div>
   <div class="table-scroll">
-  <table id="self-table" class="studies-table" aria-describedby="self-def">
+  <table id="self-table" class="studies-table six-col" aria-describedby="self-def self-sources-note">
     <caption class="visually-hidden">Self-published NaNDA datasets, sortable by column.</caption>
     <colgroup>
       <col>
+      <col class="col-num">
+      <col class="col-num">
       <col class="col-num">
       <col class="col-num">
       <col class="col-num">
@@ -876,6 +933,8 @@ footer p {{ margin: 0; }}
       <tr>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="earlier" data-type="num">Earlier version (openICPSR)</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="current" data-type="num">Current deposit</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
       </tr>
@@ -893,16 +952,19 @@ footer p {{ margin: 0; }}
   <details class="section-accordion">
   <summary><h2 id="unpublished-heading">Unpublished NaNDA datasets ({unpublished_count})</h2></summary>
   <p class="definition" id="unpublished-def"><strong>Unpublished:</strong> {html.escape(unpublished_def)}</p>
+  <p class="definition" id="unpublished-sources-note"><strong>Two sources:</strong> {html.escape(sources_note)}</p>
   <div class="filter-row">
     <label for="filter-unpublished">Filter</label>
     <input type="search" id="filter-unpublished" data-target="unpublished-table" data-count="filter-unpublished-count" placeholder="Search by title or study ID" autocomplete="off" aria-describedby="unpublished-def filter-unpublished-count">
     <p class="filter-count" id="filter-unpublished-count" aria-live="polite" aria-atomic="true">Showing {unpublished_count} of {unpublished_count} unpublished studies</p>
   </div>
   <div class="table-scroll">
-  <table id="unpublished-table" class="studies-table" aria-describedby="unpublished-def">
+  <table id="unpublished-table" class="studies-table six-col" aria-describedby="unpublished-def unpublished-sources-note">
     <caption class="visually-hidden">Unpublished NaNDA datasets, sortable by column.</caption>
     <colgroup>
       <col>
+      <col class="col-num">
+      <col class="col-num">
       <col class="col-num">
       <col class="col-num">
       <col class="col-num">
@@ -911,6 +973,8 @@ footer p {{ margin: 0; }}
       <tr>
         <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="title" data-type="text">Title</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="views" data-type="num">Total views</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="earlier" data-type="num">Earlier version (openICPSR)</button></th>
+        <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="current" data-type="num">Current deposit</button></th>
         <th scope="col" class="num" aria-sort="descending"><button type="button" class="sort-btn" data-key="total" data-type="num">Total downloads</button></th>
         <th scope="col" class="num" aria-sort="none"><button type="button" class="sort-btn" data-key="delta" data-type="num">{html.escape(delta_header_label)}</button></th>
       </tr>

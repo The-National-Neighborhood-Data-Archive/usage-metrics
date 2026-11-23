@@ -30,15 +30,17 @@ All under `data/` unless noted:
 | `dataset_title` | Full dataset title (joined from `inventory.csv` by `study_id`) |
 | `doi` | Dataset DOI (joined from `inventory.csv` by `study_id`) |
 | `url` | Landing-page URL (joined from `inventory.csv` by `study_id`) |
-| `total_downloads` | Total downloads (data + docs for curated; total downloads for openICPSR) |
-| `total_views` | Total project-page views (openICPSR only; blank for curated) |
+| `total_downloads` | Total downloads (data + docs for curated; for openICPSR, `earlier_version_downloads` + `current_deposit_downloads`) |
+| `total_views` | Total project-page views (openICPSR only, from the openICPSR usage endpoint; blank for curated) |
 | `publications` | Count of related publications (curated ICPSR only; blank for openICPSR) |
-| `data_downloads` | Data file downloads (curated only; blank for openICPSR) |
-| `documentation_downloads` | Documentation file downloads (curated only; blank for openICPSR) |
+| `data_downloads` | Data file downloads (curated, and openICPSR rows from the self-deposit usage source; blank in snapshots before 2026-12 for openICPSR) |
+| `documentation_downloads` | Documentation file downloads (same coverage as `data_downloads`) |
 | `unique_users` | Distinct users who downloaded (curated only; blank for openICPSR) |
 | `num_institutions` | Distinct institutions that downloaded (curated only; blank for openICPSR) |
+| `earlier_version_downloads` | openICPSR rows only, since the 2026-12 snapshot: downloads of the earlier version of the dataset, from the openICPSR usage endpoint. Blank for curated rows and in older snapshots |
+| `current_deposit_downloads` | openICPSR rows only, since the 2026-12 snapshot: downloads of the current deposit, from the usage-statistics endpoint of ICPSR's self-deposit system. Blank for curated rows and in older snapshots |
 | `scrape_status` | `success` or `error` — did this row's scrape work (snapshots dated before 2026-08 call this column `status`) |
-| `error_message` | Populated when `scrape_status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value) |
+| `error_message` | Populated when `scrape_status == error`, or for non-fatal sub-fetch failures (e.g., publications fetch error, unknown archive value, a usage source that failed and whose prior value was kept) |
 | `timestamp` | When this row was scraped |
 
 ### Time-series (`nanda_usage_timeseries_*.csv`)
@@ -72,12 +74,18 @@ Long-format with one row per `(study_id, year, month)`, built by `build_history.
 
 ## How it works
 
-Routing is two-tiered: `deposit_via=RDE` wins first (the only place RDE numbers exist), then `archive` picks the legacy endpoint set.
+Routing goes by `archive` first. Self-published rows ask two usage sources and add them; curated rows pick one source by `deposit_via`.
 
-- **`deposit_via=RDE`** (any archive): `www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/products/{id}` — GA4-backed lifetime totals plus a data/documentation download split. No views, no publications, no time-series. Powers the new `/sites/nanda/view/studies/{id}` pages.
-- **`archive=ICPSR`** + legacy (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution` — full breakdown of data vs. documentation downloads, unique users, and institutions.
-- **`archive=openICPSR`** + legacy: `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project` — total downloads, total views, and a publications count.
+- **`archive=openICPSR`** (self-published, published or unpublished, whatever `deposit_via` says): two requests per dataset.
+  - `pcms.icpsr.umich.edu/pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project`: total downloads and total views of the earlier version of the dataset on openICPSR. Saved as `earlier_version_downloads` and `total_views`.
+  - `www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/products/{id}`: GA4-backed downloads of the current deposit in ICPSR's self-deposit system, with a data/documentation split. Saved as `current_deposit_downloads`, `data_downloads`, `documentation_downloads`.
+  - `total_downloads` is the sum of the two. ICPSR moved every NaNDA openICPSR deposit into its self-deposit system in 2026, after which the openICPSR endpoint mostly stopped counting while the new endpoint started from the move. A small number of downloads may be counted by both; ICPSR has not said.
+  - If one source fails for a row, that source's value is reused from the most recent prior snapshot that has it and `error_message` says so, so a failed request never lowers a total. For an unpublished row, the self-deposit source not knowing the deposit (404, 500, or an empty body) is normal: `current_deposit_downloads` is 0 and nothing is logged.
+- **`archive=ICPSR` + `deposit_via=RDE`** (curated studies ICPSR has moved onto RDE): `www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/products/{id}` only. GA4-backed lifetime totals plus a data/documentation download split. No views, no publications, no time-series.
+- **`archive=ICPSR` + `deposit_via=legacy`** (curated): `pcms.icpsr.umich.edu/pcms/metrics/data/api/downloadCount`, `/downloadInfo`, `/institution`: full breakdown of data vs. documentation downloads, unique users, and institutions.
 - **Publications** (curated only): `www.icpsr.umich.edu/sites/api/solr/biblio/query_dm?q=STUDYQ:{id}&fq=STATUS:approved`, the Solr endpoint the public "Related publications" page uses; we read `response.numFound` for the count.
+
+The first snapshot with the two per-source columns adds downloads that earlier snapshots never counted. For that one build, the dashboard and the delta report say how many downloads across how many datasets were newly counted.
 
 Dataset titles are read from `inventory.csv` at startup, not fetched live. `cloudscraper` handles `pcms.icpsr.umich.edu`'s Cloudflare challenge.
 
@@ -118,7 +126,7 @@ To run locally:
 ```bash
 cd usage-metrics
 pip install -r requirements.txt
-python nanda_usage_scraper.py     # ~3 min for 104 studies (1-second polite delay)
+python nanda_usage_scraper.py     # ~5 min for 104 studies (1-second polite delay, two requests per self-published dataset)
 python build_history.py           # writes data/nanda_download_history.csv
 python generate_delta.py          # writes data/delta_*.md
 python build_dashboard.py         # writes docs/index.html
@@ -131,8 +139,8 @@ To publish the dashboard, enable GitHub Pages: **Settings → Pages → Source: 
 - **No per-institution download counts.** PCMS's `/institution` endpoint returns institution metadata (name, location, type) but no download counts per institution. We expose `num_institutions` but not a top-institutions list.
 - **openICPSR has no documentation/data split.** The openICPSR usage endpoint returns one `totalDownloads` figure with no breakdown.
 - **No geographic breakdown.** PCMS does not expose a country/region/state download breakdown for studies. Verified by probing every plausible endpoint and inspecting the dashboard JS bundles; no such widget exists in the public utilization page.
-- **RDE totals are GA4-only and not comparable across routes.** Numbers for `deposit_via=RDE` rows come from the NaNDA tenant's GA4-backed usage-statistics endpoint, which only captures activity since GA4 tracking went live on the new tenant. A study that lived in curated PCMS first will look much smaller on the RDE endpoint — e.g., curated 38528 shows ~thousands of lifetime downloads in PCMS but only 105 on the GA4 endpoint. Don't compare an RDE row's total to a curated row's total without that caveat. The GA4 endpoint also returns 500 for very new studies until ingestion catches up (status logged in `error_message`, counts stay at 0).
-- **RDE rows have no per-month time-series, views, publications, or institutions.** The NaNDA usage-statistics endpoint exposes only lifetime totals plus the data/documentation split, so RDE rows are excluded from `nanda_usage_timeseries_*.csv` and leave `total_views`, `publications`, `unique_users`, and `num_institutions` blank.
+- **Self-deposit (RDE) counts are GA4-only.** The usage-statistics endpoint of ICPSR's self-deposit system only captures activity since GA4 tracking went live there. For self-published datasets the scraper adds the earlier version's openICPSR count to it, so their totals include both periods, but the two parts may overlap by a small number of downloads. A curated study routed by `deposit_via=RDE` gets the GA4 number alone, which is much smaller than its PCMS history (curated 38528 shows thousands of lifetime downloads in PCMS but about a hundred on the GA4 endpoint); don't compare such a row to a legacy curated row without that caveat. The GA4 endpoint also returns 500 for very new studies until ingestion catches up (logged in `error_message`; the prior value is kept for openICPSR rows, counts stay at 0 for curated RDE rows).
+- **Self-published and RDE rows have no per-month time-series, publications, or institutions.** Neither the openICPSR usage endpoint nor the usage-statistics endpoint exposes monthly buckets, so these rows are excluded from `nanda_usage_timeseries_*.csv` and leave `publications`, `unique_users`, and `num_institutions` blank. Views come from the openICPSR endpoint only, so curated RDE rows have none.
 
 ## Notes
 
