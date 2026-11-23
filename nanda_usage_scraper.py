@@ -8,9 +8,22 @@ them to data/nanda_usage_stats_YYYY-MM-DD.csv.
 Inventory-driven: `inventory.csv` (sibling file) is the source of truth for
 two things:
   - Dataset title (joined onto each row by study_id)
-  - Routing — `deposit_via=RDE` wins first (new endpoint required), then
-    `archive` ∈ {ICPSR, openICPSR} picks the legacy endpoint set.
+  - Routing. `archive == openICPSR` (self-published, published or not) asks
+    BOTH usage sources and adds them, whatever `deposit_via` says. For
+    `archive == ICPSR` (curated), `deposit_via=RDE` sends the row to the new
+    usage-statistics API and `legacy` to the PCMS endpoints.
     ID-length heuristics are not used.
+
+Self-published totals (since 2026-11): ICPSR moved every NaNDA openICPSR
+deposit into its self-deposit system (RDE). The old openICPSR usage source
+kept the downloads of the earlier version of each dataset and has mostly
+stopped counting; the new usage-statistics source counts the current
+deposit. Each openICPSR row saves both numbers separately
+(`earlier_version_downloads`, `current_deposit_downloads`) and
+`total_downloads` is their sum. A failed request never lowers a total: the
+failing source's value is reused from the most recent prior snapshot that
+has it, and `error_message` says so. A small number of downloads may be
+counted in both sources (ICPSR has not confirmed either way).
 
 API sources:
 
@@ -18,16 +31,19 @@ API sources:
      - Rich breakdown: data vs documentation downloads, unique users,
        institutions. Per-month time-series.
 
-  2. PCMS openICPSR project-usage API — for archive=openICPSR + legacy:
+  2. PCMS openICPSR project-usage API, for every archive=openICPSR row:
        /pcms/metrics/data/api/openicpsr/projects/{id}/usage/view?level=project
-     - Returns total_downloads, total_views, related publications count.
-       All-time, no date params.
+     - Returns total_downloads (the earlier version's downloads), total_views,
+       related publications count. All-time, no date params.
 
-  3. NaNDA usage-statistics API (www.icpsr.umich.edu) — for deposit_via=RDE:
+  3. NaNDA usage-statistics API (www.icpsr.umich.edu), for every
+     archive=openICPSR row and for archive=ICPSR rows with deposit_via=RDE:
        /sites/api/usage-statistics-api/usage-statistics/products/{id}
      - GA4-backed totals + data/documentation split. Captures post-migration
        activity only — numbers do not match curated PCMS for older studies.
      - No views, no publications, no time-series.
+     - Does not know many unpublished openICPSR deposits (404, 500, or an
+       empty body). For unpublished rows that is expected and quiet.
 
   4. ICPSR Solr biblio API (www.icpsr.umich.edu/sites/api/solr/biblio), curated only:
      - Returns the count of related publications.
@@ -35,6 +51,8 @@ API sources:
 Uses cloudscraper because pcms.icpsr.umich.edu sits behind Cloudflare.
 """
 
+import argparse
+import os
 import re
 import time
 from datetime import datetime
@@ -47,8 +65,15 @@ import pandas as pd
 # Configuration
 # ---------------------------------------------------------------------------
 
-OUTPUT_DIR = Path("data")
+# Where snapshots are written. `data/` in the repo for real runs; a scratch
+# run can redirect with --output-dir or NANDA_OUTPUT_DIR so nothing under
+# data/ changes. The prior snapshot used for carry-forward is always read
+# from the repo's data/ folder.
+DATA_DIR = Path("data")
+OUTPUT_DIR = Path(os.environ.get("NANDA_OUTPUT_DIR", "data"))
 INVENTORY_PATH = Path(__file__).parent / "inventory.csv"
+# Same strict pattern check_scrape.py, generate_delta.py, and build_dashboard.py use.
+DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
 
 # Stripped from titles at inventory load — every NaNDA dataset's title
 # starts with this exact prefix, so removing it surfaces the distinguishing
@@ -85,10 +110,16 @@ OPENICPSR_USAGE_URL = (
 # NaNDA tenant usage-statistics API. Powers the new
 # /sites/nanda/view/studies/{id} pages. RDE deposits do not appear in either
 # PCMS endpoint set; this is the only place their counts exist.
-NANDA_USAGE_STATS_URL = (
+# Overridable (NANDA_USAGE_STATS_URL or --nanda-stats-url) so a scratch run can
+# point it at an unreachable host and exercise the carry-forward path.
+NANDA_USAGE_STATS_URL = os.environ.get(
+    "NANDA_USAGE_STATS_URL",
     "https://www.icpsr.umich.edu/sites/api/usage-statistics-api/usage-statistics/"
-    "products/{sid}"
+    "products/{sid}",
 )
+# The new source answers these for unpublished deposits it has never heard
+# of. For an unpublished row they are an expected miss, not a failure.
+EXPECTED_MISS_STATUSES = {404, 500}
 
 # Publications Solr API, curated ICPSR only. Same endpoint the public
 # "Related publications" study page calls (the old search.icpsr.umich.edu
@@ -108,10 +139,15 @@ CSV_COLUMNS = [
     "documentation_downloads",
     "unique_users",
     "num_institutions",
+    "earlier_version_downloads",
+    "current_deposit_downloads",
     "scrape_status",
     "error_message",
     "timestamp",
 ]
+# The two per-source download counts behind `total_downloads` for openICPSR
+# rows (added 2026-11; blank for curated rows and in older snapshots).
+SOURCE_COLUMNS = ["earlier_version_downloads", "current_deposit_downloads"]
 
 TIMESERIES_COLUMNS = [
     "study_id",
@@ -186,12 +222,15 @@ def warn(study_id, msg: str) -> None:
     print(f"  WARN {study_id}: {msg}", flush=True)
 
 
-def get_checked(scraper, url, study_id, label, **kwargs):
+def get_checked(scraper, url, study_id, label, quiet_statuses=frozenset(), **kwargs):
     """
     GET with retries on transient failures. On a final non-200 response,
     log a warning naming the study, status, server, and Cloudflare headers
     (cf-mitigated: challenge means Cloudflare blocked the request), then
     raise. Returns the successful response.
+
+    `quiet_statuses`: statuses that are an expected miss for this request.
+    They are not retried and not warned about; the call returns None.
     """
     kwargs.setdefault("timeout", 30)
     for attempt in range(MAX_RETRIES + 1):
@@ -205,6 +244,8 @@ def get_checked(scraper, url, study_id, label, **kwargs):
             raise
         if r.status_code == 200:
             return r
+        if r.status_code in quiet_statuses:
+            return None
         if r.status_code in RETRY_STATUSES and attempt < MAX_RETRIES:
             time.sleep(RETRY_BACKOFF * (attempt + 1))
             continue
@@ -274,7 +315,9 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     """
     For openICPSR projects, hit the project-usage view endpoint that the
     React component on the page itself calls. Returns a dict with keys
-    total_downloads, total_views (both int, 0 if missing).
+    total_downloads, total_views (both int, 0 if missing). Since ICPSR moved
+    the self-published deposits into its self-deposit system, this count
+    covers the earlier version of each dataset and has mostly stopped growing.
     """
     url = OPENICPSR_USAGE_URL.format(sid=study_id)
     r = get_checked(scraper, url, study_id, "openicpsr usage", params={"level": "project"})
@@ -285,7 +328,7 @@ def fetch_openicpsr_usage(study_id: int, scraper) -> dict:
     }
 
 
-def fetch_nanda_usage_stats(study_id: int, scraper) -> dict:
+def fetch_nanda_usage_stats(study_id: int, scraper, expect_missing: bool = False):
     """
     NaNDA-tenant usage stats. Used for RDE deposits, which the openICPSR
     usage endpoint reports as zero. Response shape:
@@ -305,12 +348,27 @@ def fetch_nanda_usage_stats(study_id: int, scraper) -> dict:
     Counts are GA4-backed, so they reflect post-migration activity only — not
     comparable to curated PCMS totals for older studies. Endpoint returns 500
     for very new studies that haven't been ingested yet; callers should treat
-    HTTP errors as a soft failure (record in error_message, leave 0s).
+    HTTP errors as a soft failure (record in error_message, keep the prior
+    value).
+
+    `expect_missing=True` (unpublished openICPSR rows): a 404, 500, or empty
+    body is an expected miss. No retry, no WARN line, returns None. An empty
+    body on a row that is expected to exist raises ValueError so the caller
+    can carry the prior value forward.
     """
     url = NANDA_USAGE_STATS_URL.format(sid=study_id)
-    r = get_checked(scraper, url, study_id, "nanda usage-stats")
-    j = r.json() or {}
-    dd = j.get("downloadDetails") or {}
+    quiet = EXPECTED_MISS_STATUSES if expect_missing else frozenset()
+    r = get_checked(scraper, url, study_id, "nanda usage-stats", quiet_statuses=quiet)
+    if r is None:
+        return None
+    body = r.text.strip()
+    j = r.json() if body else {}
+    dd = (j or {}).get("downloadDetails") or {}
+    if not dd:
+        if expect_missing:
+            return None
+        warn(study_id, "nanda usage-stats: 200 but no downloadDetails in body")
+        raise ValueError("empty body")
     return {
         "total_downloads":         int(dd.get("totalDownloads") or 0),
         "data_downloads":          int(dd.get("dataDownloads") or 0),
@@ -333,18 +391,147 @@ def fetch_publications_count(study_id: int, scraper) -> int:
     return int(r.json().get("response", {}).get("numFound", 0))
 
 
-def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
+def find_prior_snapshot(data_dir: Path = DATA_DIR, before: str | None = None):
+    """
+    Path of the newest dated snapshot in `data_dir` (strict pattern, so
+    `_latest` and manual exports are ignored). `before`: an ISO date; only
+    snapshots dated before it count, so a rerun on the same day still reads
+    the previous month's file. None when there is none.
+    """
+    files = []
+    for f in Path(data_dir).glob("nanda_usage_stats_*.csv"):
+        m = DATED_RE.match(f.name)
+        if m and (before is None or m.group(1) < before):
+            files.append((m.group(1), f))
+    return sorted(files)[-1][1] if files else None
+
+
+def _int_or_none(v):
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def load_prior_values(path, inventory: dict) -> dict:
+    """
+    Per-source values from the previous snapshot, keyed by study_id, for
+    openICPSR rows:
+        {sid: {"earlier_version_downloads": int|None,
+               "current_deposit_downloads": int|None,
+               "total_views": int|None,
+               "data_downloads": int|None,
+               "documentation_downloads": int|None}}
+
+    Used when a source fails this run, so a failed request never lowers a
+    total. A snapshot that already has the two source columns is read as is.
+    An older snapshot (before 2026-11) has only `total_downloads`, which came
+    from one source per row: the new source for `deposit_via == RDE` rows,
+    the old openICPSR source for every other openICPSR row. That number is
+    taken as the prior value of that source and the other source has no
+    prior value.
+    """
+    if path is None or not Path(path).exists():
+        return {}
+    prev = pd.read_csv(path)
+    has_sources = all(c in prev.columns for c in SOURCE_COLUMNS)
+    out = {}
+    for _, r in prev.iterrows():
+        sid = int(r["study_id"])
+        inv = inventory.get(sid, {})
+        if inv.get("archive") != "openICPSR":
+            continue
+        vals = {
+            "total_views": _int_or_none(r.get("total_views")),
+            "data_downloads": _int_or_none(r.get("data_downloads")),
+            "documentation_downloads": _int_or_none(r.get("documentation_downloads")),
+        }
+        if has_sources:
+            vals["earlier_version_downloads"] = _int_or_none(r.get("earlier_version_downloads"))
+            vals["current_deposit_downloads"] = _int_or_none(r.get("current_deposit_downloads"))
+        else:
+            total = _int_or_none(r.get("total_downloads"))
+            if inv.get("deposit_via") == "RDE":
+                vals["earlier_version_downloads"] = None
+                vals["current_deposit_downloads"] = total
+            else:
+                vals["earlier_version_downloads"] = total
+                vals["current_deposit_downloads"] = None
+        out[sid] = vals
+    return out
+
+
+def _append_error(row: dict, msg: str) -> None:
+    row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
+
+
+def scrape_openicpsr_both_sources(study_id: int, scraper, row: dict,
+                                  published: bool, prior: dict) -> None:
+    """
+    Fill an openICPSR row from both usage sources and set total_downloads
+    to their sum.
+
+      earlier_version_downloads  <- old openICPSR project-usage view
+      current_deposit_downloads  <- new NaNDA usage-statistics API
+      total_views                <- old source
+      data/documentation_downloads <- new source
+
+    A source that fails keeps its value from the prior snapshot (0 when there
+    is none) and the failure is recorded in error_message. For an
+    unpublished row the new source not knowing the deposit (404, 500, empty
+    body) is expected: 0, quietly.
+    """
+    prior = prior or {}
+
+    # Old source: downloads of the earlier version.
+    try:
+        old = fetch_openicpsr_usage(study_id, scraper)
+        row["earlier_version_downloads"] = old["total_downloads"]
+        row["total_views"] = old["total_views"]
+    except Exception as e:
+        kept = prior.get("earlier_version_downloads")
+        row["earlier_version_downloads"] = kept if kept is not None else 0
+        row["total_views"] = prior.get("total_views")
+        _append_error(row, f"openicpsr-usage: {str(e)[:120]}; "
+                           f"kept prior earlier_version_downloads={row['earlier_version_downloads']}")
+
+    # New source: downloads of the current deposit.
+    try:
+        new = fetch_nanda_usage_stats(study_id, scraper, expect_missing=not published)
+        if new is None:
+            row["current_deposit_downloads"] = 0
+        else:
+            row["current_deposit_downloads"] = new["total_downloads"]
+            row["data_downloads"] = new["data_downloads"]
+            row["documentation_downloads"] = new["documentation_downloads"]
+    except Exception as e:
+        kept = prior.get("current_deposit_downloads")
+        row["current_deposit_downloads"] = kept if kept is not None else 0
+        row["data_downloads"] = prior.get("data_downloads")
+        row["documentation_downloads"] = prior.get("documentation_downloads")
+        _append_error(row, f"nanda-usage-stats: {str(e)[:120]}; "
+                           f"kept prior current_deposit_downloads={row['current_deposit_downloads']}")
+
+    row["total_downloads"] = row["earlier_version_downloads"] + row["current_deposit_downloads"]
+
+
+def scrape_study(study_id: int, scraper, inventory: dict, prior_values: dict | None = None) -> dict:
     """Pull one study's metrics. Returns a dict matching CSV_COLUMNS.
 
     Routing (checked in order):
-      1. deposit_via == 'RDE'         → NaNDA usage-statistics API
-      2. archive == 'ICPSR'           → PCMS endpoints + publications search API
-      3. archive == 'openICPSR'       → openICPSR project-usage endpoint
+      1. archive == 'openICPSR'       → BOTH the openICPSR project-usage
+                                        endpoint and the NaNDA usage-statistics
+                                        API; total_downloads is their sum.
+                                        `deposit_via` does not matter here.
+      2. deposit_via == 'RDE'         → NaNDA usage-statistics API (curated
+                                        studies ICPSR has moved onto RDE)
+      3. archive == 'ICPSR'           → PCMS endpoints + publications search API
       4. anything else (or missing)   → log and skip metric fetches
 
-    RDE wins first because the only place RDE deposit numbers exist is the
-    new NaNDA tenant endpoint — the openICPSR usage view returns zero for
-    them regardless of `archive` value.
+    `prior_values` is load_prior_values() for the previous snapshot; it is
+    what a failed source falls back to for openICPSR rows.
     """
     row = {
         "study_id": study_id,
@@ -358,6 +545,8 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
         "documentation_downloads": None,
         "unique_users": None,
         "num_institutions": None,
+        "earlier_version_downloads": None,
+        "current_deposit_downloads": None,
         "scrape_status": "success",
         "error_message": "",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -370,11 +559,15 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
         row["url"] = inv_entry.get("url")
         archive = inv_entry.get("archive")
         deposit_via = inv_entry.get("deposit_via")
+        published = inv_entry.get("status") != "unpublished"
 
-        if deposit_via == "RDE":
-            # GA4-backed totals from the new NaNDA tenant API. Soft-fail on
-            # HTTP errors — very new RDE deposits 500 here until ingestion
-            # catches up.
+        if archive == "openICPSR":
+            scrape_openicpsr_both_sources(
+                study_id, scraper, row, published, (prior_values or {}).get(study_id))
+        elif deposit_via == "RDE":
+            # Curated study moved onto RDE: GA4-backed totals from the new
+            # NaNDA tenant API. Soft-fail on HTTP errors: very new RDE
+            # deposits 500 here until ingestion catches up.
             try:
                 usage = fetch_nanda_usage_stats(study_id, scraper)
                 row["total_downloads"]         = usage["total_downloads"]
@@ -396,13 +589,6 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
                 except Exception as e:
                     msg = f"pubs: {str(e)[:80]}"
                     row["error_message"] = (row["error_message"] + "; " + msg).strip("; ")
-        elif archive == "openICPSR":
-            try:
-                usage = fetch_openicpsr_usage(study_id, scraper)
-                row["total_downloads"] = usage["total_downloads"]
-                row["total_views"]     = usage["total_views"]
-            except Exception as e:
-                row["error_message"] = f"openicpsr-usage fallback: {str(e)[:160]}"
         else:
             row["error_message"] = f"unknown archive value: {archive!r}"
         return row
@@ -413,11 +599,12 @@ def scrape_study(study_id: int, scraper, inventory: dict) -> dict:
         return row
 
 
-def scrape_all(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) -> pd.DataFrame:
+def scrape_all(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY,
+               prior_values: dict | None = None) -> pd.DataFrame:
     rows = []
     n = len(study_ids)
     for i, sid in enumerate(study_ids, 1):
-        row = scrape_study(sid, scraper, inventory)
+        row = scrape_study(sid, scraper, inventory, prior_values)
         rows.append(row)
         if row["scrape_status"] == "success":
             tag = "ok " if row["total_downloads"] else "0  "
@@ -514,18 +701,41 @@ def scrape_timeseries(study_ids, scraper, inventory: dict, delay=REQUEST_DELAY) 
 # Main
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    OUTPUT_DIR.mkdir(exist_ok=True)
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser(description="Scrape NaNDA usage metrics from ICPSR.")
+    ap.add_argument("--output-dir", type=Path, default=OUTPUT_DIR,
+                    help="where to write the snapshot files (default data/, or "
+                         "$NANDA_OUTPUT_DIR). The prior snapshot for carry-forward "
+                         "is always read from data/.")
+    ap.add_argument("--nanda-stats-url", default=NANDA_USAGE_STATS_URL,
+                    help="URL pattern with {sid} for the NaNDA usage-statistics API; "
+                         "point it at an unreachable host to test carry-forward")
+    ap.add_argument("--only", type=int, nargs="*", default=None,
+                    help="scrape only these study IDs (scratch runs)")
+    return ap.parse_args(argv)
+
+
+def main(argv=None) -> None:
+    global NANDA_USAGE_STATS_URL
+    args = parse_args(argv)
+    NANDA_USAGE_STATS_URL = args.nanda_stats_url
+    out_dir = args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.now().strftime("%Y-%m-%d")
+    study_ids = [s for s in STUDY_IDS if args.only is None or s in set(args.only)]
 
     inventory = load_inventory()
     print(f"Loaded inventory: {len(inventory)} studies")
-    print(f"Scraping {len(STUDY_IDS)} NaNDA studies ({START_DATE} -> {END_DATE})")
+    prior_path = find_prior_snapshot(DATA_DIR, before=today)
+    prior_values = load_prior_values(prior_path, inventory)
+    print(f"Prior snapshot for carry-forward: {prior_path} "
+          f"({len(prior_values)} openICPSR rows)")
+    print(f"Scraping {len(study_ids)} NaNDA studies ({START_DATE} -> {END_DATE})")
     scraper = make_scraper()
-    df = scrape_all(STUDY_IDS, scraper, inventory)
+    df = scrape_all(study_ids, scraper, inventory, prior_values=prior_values)
 
-    dated_path  = OUTPUT_DIR / f"nanda_usage_stats_{today}.csv"
-    latest_path = OUTPUT_DIR / "nanda_usage_stats_latest.csv"
+    dated_path  = out_dir / f"nanda_usage_stats_{today}.csv"
+    latest_path = out_dir / "nanda_usage_stats_latest.csv"
     df.to_csv(dated_path, index=False)
     df.to_csv(latest_path, index=False)
 
@@ -539,9 +749,9 @@ def main() -> None:
     print(f"  {n_ok} success / {n_err} errors / {n_real} with non-zero downloads")
 
     # Monthly time-series (curated ICPSR only)
-    ts_df = scrape_timeseries(STUDY_IDS, scraper, inventory)
-    ts_dated  = OUTPUT_DIR / f"nanda_usage_timeseries_{today}.csv"
-    ts_latest = OUTPUT_DIR / "nanda_usage_timeseries_latest.csv"
+    ts_df = scrape_timeseries(study_ids, scraper, inventory)
+    ts_dated  = out_dir / f"nanda_usage_timeseries_{today}.csv"
+    ts_latest = out_dir / "nanda_usage_timeseries_latest.csv"
     ts_df.to_csv(ts_dated, index=False)
     ts_df.to_csv(ts_latest, index=False)
 

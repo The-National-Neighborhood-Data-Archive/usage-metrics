@@ -18,6 +18,14 @@ Writes:
   data/delta_latest.md
 
 If no previous snapshot exists, writes a short stub.
+
+One-time line (2026-11). The first snapshot with the two per-source columns
+for self-published datasets (`earlier_version_downloads`,
+`current_deposit_downloads`) adds downloads from ICPSR's self-deposit system
+that earlier snapshots never counted. When the previous snapshot lacks those
+columns and the current one has them, the report says how many downloads and
+datasets that is, so the jump is not read as a surge. build_dashboard.py
+shows the same notice; both use first_both_sources_notice() below.
 """
 
 import re
@@ -30,7 +38,9 @@ from build_history import HISTORY_CSV, apply_history_totals, preserved_downloads
 
 DATA_DIR = Path("data")
 LATEST_CSV = DATA_DIR / "nanda_usage_stats_latest.csv"
+INVENTORY_CSV = Path("inventory.csv")
 DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
+SOURCE_COLUMNS = ["earlier_version_downloads", "current_deposit_downloads"]
 TOP_N = 5
 PCT_BASELINE_MIN = 50  # ignore studies with previous < 50 for % movers
 TITLE_TRUNC = 70
@@ -169,6 +179,48 @@ def dashboard_total_line(current: pd.DataFrame, history_csv: Path = HISTORY_CSV)
             f"{dashboard_total:,} ({preserved:,} preserved from earlier scrapes)")
 
 
+def newly_counted_downloads(current: pd.DataFrame, previous: pd.DataFrame, inventory: pd.DataFrame):
+    """
+    Downloads the first two-source snapshot counts that no earlier snapshot
+    did, as (downloads, datasets), or None when this is not that snapshot.
+
+    Condition: `previous` lacks the two source columns and `current` has
+    them. Before that snapshot every openICPSR row was read from one source,
+    the new usage-statistics source for `deposit_via == RDE` rows and the
+    old openICPSR source for the rest. So the newly counted part of each row
+    is the other source: `current_deposit_downloads` for legacy rows and
+    `earlier_version_downloads` for RDE rows. `inventory` needs study_id,
+    archive, deposit_via.
+    """
+    if previous is None or inventory is None:
+        return None
+    if not all(c in current.columns for c in SOURCE_COLUMNS):
+        return None
+    if current[SOURCE_COLUMNS].isna().all().all():
+        return None     # columns present but empty: an older snapshot padded by a caller
+    if all(c in previous.columns for c in SOURCE_COLUMNS):
+        return None
+    # build_dashboard.py has already merged archive onto `current`; take the
+    # inventory's copy either way.
+    rows = current.drop(columns=["archive", "deposit_via"], errors="ignore").merge(
+        inventory[["study_id", "archive", "deposit_via"]], on="study_id", how="left")
+    rows = rows[rows["archive"] == "openICPSR"]
+    is_rde = rows["deposit_via"] == "RDE"
+    new_part = rows["current_deposit_downloads"].where(~is_rde, rows["earlier_version_downloads"]).fillna(0)
+    return int(new_part.sum()), int((new_part > 0).sum())
+
+
+def first_both_sources_notice(current: pd.DataFrame, previous: pd.DataFrame, inventory: pd.DataFrame):
+    """The one-time sentence for the first two-source snapshot, or None."""
+    counted = newly_counted_downloads(current, previous, inventory)
+    if counted is None:
+        return None
+    n, m = counted
+    return (f"This month's totals include downloads from ICPSR's self-deposit system for the "
+            f"first time ({n:,} downloads across {m} dataset{'s' if m != 1 else ''}). "
+            f"Earlier months did not count them.")
+
+
 def section_new_studies(new_df: pd.DataFrame) -> str:
     if new_df.empty:
         return "_None._"
@@ -260,6 +312,10 @@ def main() -> None:
     dashboard_line = dashboard_total_line(current)
     dashboard_block = [dashboard_line] if dashboard_line else []
 
+    inventory = pd.read_csv(INVENTORY_CSV) if INVENTORY_CSV.exists() else None
+    both_sources = first_both_sources_notice(current, previous, inventory)
+    both_sources_block = [f"- **New usage source:** {both_sources}"] if both_sources else []
+
     # Canary: did the source's history window lose months since last time?
     warn_block = []
     shift = timeseries_window_shift(prev_date)
@@ -286,6 +342,7 @@ def main() -> None:
         f"- **Total downloads across all of NaNDA:** {total_curr:,} (was {total_prev:,})",
         net_line,
         *dashboard_block,
+        *both_sources_block,
         f"- **Datasets in this report:** {len(current)} ({len(new_df)} new since {prev_date})",
         "",
         "## Datasets with the most new downloads",
