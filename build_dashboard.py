@@ -292,7 +292,8 @@ def main() -> None:
         title_safe = html.escape(row["title"])
         # The version comes from the inventory and shows after the title, so a version
         # correction there is visible here at the next build.
-        version = f' <span class="muted version">{html.escape(row["version"])}</span>' if row["version"] else ""
+        version = (f' <span class="muted version"><span class="visually-hidden">Version </span>'
+                   f'{html.escape(row["version"])}</span>') if row["version"] else ""
         if row["doi"]:
             href = "https://doi.org/" + row["doi"]
             return f'<a href="{html.escape(href)}">{title_safe}</a>{version}'
@@ -302,7 +303,8 @@ def main() -> None:
 
     def delta_cell(row):
         if row["delta"] is None:
-            return '<td class="num" data-sort=""><span class="muted">–</span></td>'
+            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">–</span>'
+                    '<span class="visually-hidden">no prior value</span></td>')
         cls = ""
         title_attr = ""
         if row["delta"] > 0:
@@ -322,7 +324,8 @@ def main() -> None:
 
     def num_cell(value):
         if value is None:
-            return '<td class="num" data-sort=""><span class="muted">–</span></td>'
+            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">–</span>'
+                    '<span class="visually-hidden">not reported</span></td>')
         return f'<td class="num" data-sort="{value}">{value:,}</td>'
 
     def render_curated_tbody():
