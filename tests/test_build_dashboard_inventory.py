@@ -68,6 +68,21 @@ def test_no_inventory_file():
     assert "version" in out.columns
 
 
+def test_duplicate_inventory_id_does_not_duplicate_rows(capsys):
+    inv = pd.concat([INVENTORY, INVENTORY.iloc[[0]]], ignore_index=True)
+    out = bd.apply_inventory_details(SNAPSHOT, inv)
+    assert list(out["study_id"]) == [1, 2, 3]
+    assert "duplicate" in capsys.readouterr().out.lower()
+
+
+def test_all_blank_snapshot_column_is_overridden():
+    snap = SNAPSHOT.copy()
+    snap["url"] = float("nan")          # an all-NaN float column, as pandas reads a blank column
+    out = bd.apply_inventory_details(snap, INVENTORY).set_index("study_id")
+    assert out.loc[1, "url"] == "https://new/1"
+    assert pd.isna(out.loc[3, "url"])
+
+
 def test_row_order_and_count_unchanged():
     out = bd.apply_inventory_details(SNAPSHOT, INVENTORY)
     assert list(out["study_id"]) == [1, 2, 3]

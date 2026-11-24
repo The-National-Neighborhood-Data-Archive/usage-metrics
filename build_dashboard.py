@@ -139,7 +139,14 @@ def apply_inventory_details(current: pd.DataFrame, inventory) -> pd.DataFrame:
         out["version"] = pd.NA
         return out
     cols = ["study_id", "archive", "status"] + [c for c in INVENTORY_DISPLAY_FIELDS if c in inventory.columns]
-    inv = inventory[cols].rename(columns={"status": "pub_status"})
+    inv = inventory[cols]
+    dupes = inv["study_id"][inv["study_id"].duplicated()].tolist()
+    if dupes:
+        # A repeated study_id would duplicate snapshot rows on merge and double-count the
+        # KPIs. Keep the first row and say so; the fix belongs in deposit_status.csv.
+        print(f"WARNING: inventory.csv has duplicate study_id {sorted(set(dupes))}; using the first row of each")
+        inv = inv.drop_duplicates("study_id", keep="first")
+    inv = inv.rename(columns={"status": "pub_status"})
     inv = inv.rename(columns={c: f"_inv_{c}" for c in INVENTORY_DISPLAY_FIELDS if c in inv.columns})
     out = out.merge(inv, on="study_id", how="left")
     if "_inv_title" in out.columns:
@@ -152,7 +159,9 @@ def apply_inventory_details(current: pd.DataFrame, inventory) -> pd.DataFrame:
         if snap_col not in out.columns:
             out[snap_col] = pd.NA
         has_value = out[src].notna() & (out[src].astype(str).str.strip() != "")
-        out.loc[has_value, snap_col] = out.loc[has_value, src]
+        # object dtype on both sides: pandas 3 refuses to write strings into an all-NaN
+        # float column (a snapshot whose doi or url column is entirely blank).
+        out[snap_col] = out[src].astype(object).where(has_value, out[snap_col].astype(object))
         out = out.drop(columns=[src])
     if "version" not in out.columns:
         out["version"] = pd.NA
