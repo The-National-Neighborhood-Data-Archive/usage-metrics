@@ -6,6 +6,12 @@ on:
     - cron: '0 9 1 * *'
   workflow_dispatch:  # Allow manual trigger
 
+# Same group as build-dashboard.yml, so a dashboard rebuild never pushes between this job's
+# checkout and its push.
+concurrency:
+  group: dashboard-publish
+  cancel-in-progress: false
+
 jobs:
   scrape:
     # Pinned: on the Ubuntu 26.04 image (ubuntu-latest from Oct 2026) Cloudflare
@@ -14,10 +20,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.11'
 

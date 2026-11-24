@@ -14,17 +14,20 @@ Inputs:
                                           which rebuilds the month-by-month
                                           history behind curated download
                                           totals, their Δ, and the trend chart)
-  inventory.csv                          (for archive routing: ICPSR vs openICPSR,
-                                          and deposit_via for the one-time
-                                          two-source notice)
+  inventory.csv                          (archive routing: ICPSR vs openICPSR;
+                                          deposit_via for the one-time two-source
+                                          notice; and, since 2026-11-24, the title,
+                                          version, doi, and url each row displays,
+                                          so a correction in the list shows at the
+                                          next build without a scrape)
   docs/assets/nanda-logo.svg             (NaNDA wordmark, served alongside HTML)
 
 Output:
   docs/index.html
 
 Lives in `docs/` because GitHub Pages only allows publishing from `/` or
-`/docs` — not arbitrary subfolders. To publish: Settings → Pages → branch
-main → folder /docs.
+`/docs`, not arbitrary subfolders. To publish: Settings, Pages, branch
+main, folder /docs.
 """
 
 import html
@@ -43,6 +46,13 @@ OUTPUT_DIR = Path("docs")
 LATEST_CSV  = DATA_DIR / "nanda_usage_stats_latest.csv"
 INVENTORY_CSV = Path("inventory.csv")
 DATED_RE = re.compile(r"^nanda_usage_stats_(\d{4}-\d{2}-\d{2})\.csv$")
+
+# Same prefix nanda_usage_scraper.load_inventory strips, so inventory titles match the
+# short form the snapshots carry. Kept here rather than imported: importing the scraper
+# builds its study list and pulls in cloudscraper.
+NANDA_PREFIX = "National Neighborhood Data Archive (NaNDA): "
+# Inventory column -> snapshot column it replaces at build time.
+INVENTORY_DISPLAY_FIELDS = {"title": "dataset_title", "doi": "doi", "url": "url", "version": "version"}
 
 NANDA_HOMEPAGE = "https://nanda.isr.umich.edu/"
 GITHUB_REPO = "https://github.com/the-national-neighborhood-data-archive/usage-metrics"
@@ -111,9 +121,56 @@ def chart_trend_summary(labels, values):
     )
 
 
+def apply_inventory_details(current: pd.DataFrame, inventory) -> pd.DataFrame:
+    """Join archive and publication status from the inventory, and take each row's
+    title, version, doi, and url from the inventory where it has them.
+
+    The inventory (nanda-inventory's deposit_status.csv, exported weekly) is the dataset
+    list, so a correction there should show on the dashboard at the next build, without
+    waiting for a scrape. The snapshot's own values are used only for a study the
+    inventory does not list, or for a cell the inventory leaves blank. Inventory's
+    `status` is renamed `pub_status` on merge: snapshots dated before 2026-08 call the
+    scrape-outcome column `status`, and the rename keeps the two from colliding.
+    Row order and count are unchanged."""
+    out = current.copy()
+    if inventory is None:
+        out["archive"] = "ICPSR"  # fallback; should never hit in CI
+        out["pub_status"] = "published"
+        out["version"] = pd.NA
+        return out
+    cols = ["study_id", "archive", "status"] + [c for c in INVENTORY_DISPLAY_FIELDS if c in inventory.columns]
+    inv = inventory[cols]
+    dupes = inv["study_id"][inv["study_id"].duplicated()].tolist()
+    if dupes:
+        # A repeated study_id would duplicate snapshot rows on merge and double-count the
+        # KPIs. Keep the first row and say so; the fix belongs in deposit_status.csv.
+        print(f"WARNING: inventory.csv has duplicate study_id {sorted(set(dupes))}; using the first row of each")
+        inv = inv.drop_duplicates("study_id", keep="first")
+    inv = inv.rename(columns={"status": "pub_status"})
+    inv = inv.rename(columns={c: f"_inv_{c}" for c in INVENTORY_DISPLAY_FIELDS if c in inv.columns})
+    out = out.merge(inv, on="study_id", how="left")
+    if "_inv_title" in out.columns:
+        out["_inv_title"] = out["_inv_title"].map(
+            lambda t: t[len(NANDA_PREFIX):] if isinstance(t, str) and t.startswith(NANDA_PREFIX) else t)
+    for inv_col, snap_col in INVENTORY_DISPLAY_FIELDS.items():
+        src = f"_inv_{inv_col}"
+        if src not in out.columns:
+            continue
+        if snap_col not in out.columns:
+            out[snap_col] = pd.NA
+        has_value = out[src].notna() & (out[src].astype(str).str.strip() != "")
+        # object dtype on both sides: pandas 3 refuses to write strings into an all-NaN
+        # float column (a snapshot whose doi or url column is entirely blank).
+        out[snap_col] = out[src].astype(object).where(has_value, out[snap_col].astype(object))
+        out = out.drop(columns=[src])
+    if "version" not in out.columns:
+        out["version"] = pd.NA
+    return out
+
+
 def main() -> None:
     if not LATEST_CSV.exists():
-        print(f"Missing {LATEST_CSV} — run the scraper first")
+        print(f"Missing {LATEST_CSV}. Run the scraper first.")
         return
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -140,22 +197,9 @@ def main() -> None:
     current = apply_history_totals(current, history)
     preserved = preserved_downloads(history, current["study_id"])
 
-    # --- Archive routing + publication status from inventory ---
-    # Rename inventory's `status` to `pub_status` on merge. The scraper's
-    # per-row column is now `scrape_status`, but snapshots generated before
-    # 2026-08 still carry it as `status` — keep the rename so merging against
-    # an older latest.csv can never collide.
-    if INVENTORY_CSV.exists():
-        inventory = pd.read_csv(INVENTORY_CSV)
-        inv = (
-            inventory[["study_id", "archive", "status"]]
-            .rename(columns={"status": "pub_status"})
-        )
-        current = current.merge(inv, on="study_id", how="left")
-    else:
-        inventory = None
-        current["archive"] = "ICPSR"  # fallback; should never hit in CI
-        current["pub_status"] = "published"
+    # --- Archive routing, publication status, and display fields from inventory ---
+    inventory = pd.read_csv(INVENTORY_CSV) if INVENTORY_CSV.exists() else None
+    current = apply_inventory_details(current, inventory)
 
     # Self-published rows carry both usage sources since 2026-11. Older
     # snapshots lack the two columns; treat them as missing.
@@ -226,6 +270,8 @@ def main() -> None:
         doi_str = "" if pd.isna(doi) else str(doi)
         url = r.get("url")
         url_str = "" if pd.isna(url) else str(url)
+        version = r.get("version")
+        version_str = "" if pd.isna(version) else str(version)
         archive = r.get("archive") or "ICPSR"
         pub_status = r.get("pub_status") or "published"
         table_rows.append({
@@ -233,6 +279,7 @@ def main() -> None:
             "title":      title_str,
             "doi":        doi_str,
             "url":        url_str,
+            "version":    version_str,
             "archive":    archive,
             "pub_status": pub_status,
             "total":      int(r["total_downloads"]) if pd.notna(r["total_downloads"]) else 0,
@@ -252,16 +299,21 @@ def main() -> None:
     # --- Render helpers ---
     def title_link(row):
         title_safe = html.escape(row["title"])
+        # The version comes from the inventory and shows after the title, so a version
+        # correction there is visible here at the next build.
+        version = (f' <span class="muted version"><span class="visually-hidden">Version </span>'
+                   f'{html.escape(row["version"])}</span>') if row["version"] else ""
         if row["doi"]:
             href = "https://doi.org/" + row["doi"]
-            return f'<a href="{html.escape(href)}">{title_safe}</a>'
+            return f'<a href="{html.escape(href)}">{title_safe}</a>{version}'
         if row["url"]:
-            return f'<a href="{html.escape(row["url"])}">{title_safe}</a>'
-        return title_safe
+            return f'<a href="{html.escape(row["url"])}">{title_safe}</a>{version}'
+        return title_safe + version
 
     def delta_cell(row):
         if row["delta"] is None:
-            return '<td class="num" data-sort=""><span class="muted">—</span></td>'
+            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">–</span>'
+                    '<span class="visually-hidden">no prior value</span></td>')
         cls = ""
         title_attr = ""
         if row["delta"] > 0:
@@ -269,7 +321,7 @@ def main() -> None:
         elif row["delta"] < 0:
             cls = " delta-neg"
             # Cumulative counts only fall when the source revises its
-            # history (or a scrape failed) — say so instead of implying
+            # history (or a scrape failed): say so instead of implying
             # downloads were lost.
             title_attr = (' title="Decrease reflects a revision of ICPSR&#39;s '
                           'historical data or a scrape error, not lost downloads"')
@@ -281,7 +333,8 @@ def main() -> None:
 
     def num_cell(value):
         if value is None:
-            return '<td class="num" data-sort=""><span class="muted">—</span></td>'
+            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">–</span>'
+                    '<span class="visually-hidden">not reported</span></td>')
         return f'<td class="num" data-sort="{value}">{value:,}</td>'
 
     def render_curated_tbody():
@@ -304,7 +357,7 @@ def main() -> None:
         # column exists (a snapshot from before 2026-12) is the value
         # unknown, and then a dash with a text alternative is shown.
         if value is None and other is None:
-            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">—</span>'
+            return ('<td class="num" data-sort=""><span class="muted" aria-hidden="true">–</span>'
                     '<span class="visually-hidden">not reported</span></td>')
         return num_cell(0 if value is None else value)
 
@@ -328,7 +381,7 @@ def main() -> None:
     # whether the delta covers a day, a month, or anything in between.
     def kpi_delta_html(delta, kind="num"):
         if delta is None or prev_date_iso is None:
-            return '<dd class="kpi-delta muted">— no prior snapshot</dd>'
+            return '<dd class="kpi-delta muted">No prior snapshot</dd>'
         if delta == 0:
             sign_cls = ""
             text = f"No change {prev_date_human} to {latest_human}"
@@ -367,7 +420,7 @@ def main() -> None:
         "A small number of downloads may be counted in both."
     )
     unpublished_def = (
-        "Datasets in NaNDA's inventory marked status=unpublished — openICPSR deposits "
+        "Datasets in NaNDA's inventory marked status=unpublished: openICPSR deposits "
         "that are not part of the current published release set (typically older or "
         "superseded versions). Usage reporting matches self-published: total downloads "
         "and total project-page views only, no per-month breakdown."
@@ -383,11 +436,11 @@ def main() -> None:
     if prev_date_human:
         table_footnote_text = (
             f"Change values are total downloads from {prev_date_human} to {latest_human} "
-            "(the previous monthly snapshot to the latest). A dash (—) means no comparable prior value."
+            "(the previous monthly snapshot to the latest). A dash (–) means no comparable prior value."
         )
     else:
         table_footnote_text = (
-            "No prior monthly snapshot to compare against yet — change values will populate next run."
+            "No prior monthly snapshot to compare against yet. Change values will populate next run."
         )
 
     # --- Source-revision notice ---
@@ -443,7 +496,7 @@ def main() -> None:
         "is rebuilt automatically on the first of each month from the latest scrape."
     )
 
-    page_title = f"NaNDA Usage Dashboard — {latest_human}"
+    page_title = f"NaNDA Usage Dashboard: {latest_human}"
 
     # --- HTML document ---
     html_doc = f"""<!DOCTYPE html>
@@ -717,6 +770,10 @@ table.studies-table .title-cell a {{
   text-decoration: underline;
   text-underline-offset: 2px;
 }}
+table.studies-table .title-cell .version {{
+  font-size: 0.85em;
+  white-space: nowrap;
+}}
 table.studies-table tbody tr:hover {{ background: var(--row-hover); }}
 .muted {{ color: var(--muted); }}
 .delta-pos {{ color: var(--pos); }}
@@ -818,13 +875,13 @@ footer p {{ margin: 0; }}
 <header>
   <div class="header-logo">
     <a href="https://nanda.isr.umich.edu/" target="_blank" rel="noopener noreferrer">
-      <img src="assets/nanda-logo.svg" alt="NaNDA — National Neighborhood Data Archive" class="logo" width="812" height="140">
+      <img src="assets/nanda-logo.svg" alt="NaNDA: National Neighborhood Data Archive" class="logo" width="812" height="140">
     </a>
   </div>
   <div class="header-row">
     <div class="header-title">
       <h1>NaNDA Usage Dashboard</h1>
-      <p class="tagline">The National Neighborhood Data Archive — monthly usage of our datasets on ICPSR and openICPSR.</p>
+      <p class="tagline">The National Neighborhood Data Archive: monthly usage of our datasets at ICPSR.</p>
     </div>
     <p class="updated">Data through <time datetime="{latest_iso}">{latest_human}</time></p>
   </div>
@@ -858,12 +915,12 @@ footer p {{ margin: 0; }}
 {revision_notice}
 
 <section aria-labelledby="chart-heading">
-  <h2 id="chart-heading">Monthly downloads — aggregate (curated datasets)</h2>
+  <h2 id="chart-heading">Monthly downloads, all curated datasets</h2>
   <div class="chart-wrap" role="img" aria-label="{html.escape(trend_summary)}">
     <canvas id="ts-chart"></canvas>
   </div>
   <table class="visually-hidden">
-    <caption>Aggregate monthly downloads — chart data table</caption>
+    <caption>Aggregate monthly downloads: chart data table</caption>
     <thead><tr><th scope="col">Month</th><th scope="col">Total downloads</th></tr></thead>
     <tbody>
 {chart_data_rows}

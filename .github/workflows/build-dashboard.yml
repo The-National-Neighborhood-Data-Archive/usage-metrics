@@ -1,0 +1,55 @@
+name: NaNDA Dashboard Rebuild
+
+# Rebuild docs/index.html from the saved scrapes whenever inventory.csv changes on main,
+# so a corrected title, version, DOI, or URL in the dataset list shows on the dashboard
+# without waiting for the monthly scrape. Build steps only: this workflow never runs the
+# scraper and never writes under data/.
+#
+# inventory.csv is pushed by nanda-inventory's weekly job with USAGE_METRICS_PUSH_TOKEN,
+# a personal access token. Pushes made with a personal token trigger push workflows
+# (only pushes made with the workflow's own GITHUB_TOKEN do not), so this runs after
+# each weekly sync that changed the file.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - inventory.csv
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dashboard-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    # build_dashboard.py reads the saved snapshots and the download history in memory;
+    # it writes only docs/index.html.
+    - name: Build dashboard
+      run: python build_dashboard.py
+
+    - name: Commit dashboard
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add docs/index.html
+        git diff --quiet && git diff --staged --quiet || git commit -m "Rebuild dashboard from inventory.csv $(date +'%Y-%m-%d')"
+        git pull --rebase origin "${GITHUB_REF_NAME}"
+        git push
